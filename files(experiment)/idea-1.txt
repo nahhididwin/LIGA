@@ -55,6 +55,7 @@ Kết quả: Thay vì render hàng tỷ đa giác, máy tính chỉ cần xử l
 
 
 
+
 # Ví dụ : "nén" một hình tam giác 2D đơn giản thành một con số và xem cách chúng ta "xoay" nó bằng toán học
 
 **1. Mã hóa: Biến Tam giác thành "Sợi dây" $\mathbb{L}$**
