@@ -127,3 +127,45 @@ Hệ thống Guard Bits mà bạn đề xuất đóng vai trò cực kỳ quan t
 Ví dụ: Nếu không có Guard Bits, một phép tịnh tiến quá xa có thể khiến "chiều dài cạnh" của tam giác bị tăng lên một cách vô lý. Vùng đệm bit của bạn đóng vai trò là "bức tường vật lý" trong thế giới số.
 
 
+# Bổ sung :
+
+**1. Hàm Ánh xạ ngược $\mathcal{F}^{-1}$: Cơ chế "Mổ xẻ" Bit-Stream**
+
+Thay vì giải mã tuần tự, chúng ta sử dụng tính chất của hệ cơ số động $B$ để biến $\mathcal{F}^{-1}$ thành một phép tính dịch bit và lọc (Bitwise Filtering).
+
+Giả sử mỗi Frame có độ dài cố định là $W$ bits (ví dụ 64 bits, bao gồm cả Guard Bits). Để tìm thông tin của đỉnh (hoặc gene) thứ $k$, ta không cần duyệt qua $k-1$ đỉnh trước đó.
+
+Công thức giải mã đỉnh thứ $k$:
+
+$$\text{Frame}_k = \lfloor \frac{\mathbb{L}}{B^k} \rfloor \pmod{B}$$
+
+Trong kiến trúc máy tính, nếu $B$ được chọn là lũy thừa của 2 (ví dụ $B = 2^{64}$), phép tính này trở thành:
+
+Dịch phải (Right Shift): $k \times 64$ bits.
+
+Lọc (Bitwise AND): Với mặt nạ 0xFFFFFFFFFFFFFFFF.
+
+Độ phức tạp: $O(1)$ trên phần cứng chuyên dụng (vì dịch bit là phép toán cơ bản của ALU).
+
+
+**2. Chiến lược "Hiển thị song song" (Parallel Rendering)**
+
+Để không triệt tiêu lợi thế $O(1)$, chúng ta không giải mã từng đỉnh một. Chúng ta sử dụng kiến trúc SIMD (Single Instruction, Multiple Data).
+
+Khi GPU/NPU nhận số $\mathbb{L}$, nó không coi đó là một số nguyên duy nhất mà là một mảng các Frame chồng khít. Một bộ giải mã song song (Parallel Decoder) sẽ:
+
+Phân rã $\mathbb{L}$ thành $n$ nhánh dữ liệu đồng thời.
+
+Mỗi nhánh thực hiện phép toán $\mathcal{F}^{-1}$ cho một giá trị $k$ khác nhau.
+
+Kết quả: Toàn bộ tọa độ của vật thể được "bung" ra chỉ trong một chu kỳ xung nhịp.
+
+**3. Giải thuật va chạm $O(1)$: Chứng minh tính "Không thể đánh bại"**
+
+Nếu hai vật thể được biểu diễn bằng $\mathbb{L}_1$ và $\mathbb{L}_2$, việc kiểm tra va chạm truyền thống yêu cầu so sánh từng mặt (Polygon-level). Trong LGC, ta có thể thực hiện thông qua Phép giao số học (Arithmetic Intersection).
+
+Nếu chúng ta thiết kế hàm Compiler $\mathcal{F}$ sao cho mỗi bit trong $\mathbb{L}$ tương ứng với một phân vùng không gian (Voxel), thì:
+
+$$\text{Collision} = (\mathbb{L}_1 \ \& \ \mathbb{L}_2) \neq 0$$
+
+Phép toán $AND$ này thực hiện trên toàn bộ chiều dài của $\mathbb{L}$ trong một bước.
