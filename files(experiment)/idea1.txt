@@ -20,3 +20,5 @@ Nếu số đó bắt đầu bằng 929: Đó là cấu trúc có mật độ ca
 3. Tính toán
 
 Ý tôi là nó giống kiểu thay vì thực m * n lần tính toán (n-chiều) các số; thì chỉ cần tính toán 2 số mà mỗi số có chữ số là m * n. Hình dung cơ bản thì trông như vậy. Và đúng thế, O(1) nhanh hơn hẳn O(m * n)
+
+Thực tế có thể "tính toán" ở đây đòi hỏi 1 dạng tính toán hoàn toàn mới chứ ko phải cộng/trừ/nhân/chia, hoặc cũng có thể là Bitwise Shift hay gì đó.
