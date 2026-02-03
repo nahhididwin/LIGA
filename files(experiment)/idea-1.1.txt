@@ -1,0 +1,70 @@
+# PROJECT : LINEAR GEOMETRIC CALCULUS (LGC)
+
+Hệ Tiên Đề Số Hóa Hình Thái Duy Nhất (Unified Morphological Digitization)
+
+**I. TỔNG QUAN (ABSTRACT)**
+
+LGC đề xuất một phương thức biểu diễn không gian $n$ chiều thông qua một số thực duy nhất $\mathbb{L} \in \mathbb{R}^1$. Bằng cách kết hợp đường cong lấp đầy không gian (Space-filling curves) và hệ cơ số động (Dynamic Base), LGC chuyển đổi các phép toán hình học phức tạp thành các phép toán số học sơ cấp trên các số nguyên siêu lớn (BigInt). Mục tiêu là đạt được độ phức tạp tính toán hằng số $O(1)$ đối với các thực thể hình học đơn khối.
+
+**II. GIẢ THUYẾT TRUNG TÂM (THE CORE HYPOTHESIS)**
+
+Mọi cấu trúc hình học $\mathcal{S}$ trong không gian Hilbert $n$ chiều có thể được ánh xạ vào một tập hợp số nguyên thông qua một hàm Compiler $\mathcal{F}$:
+
+$$\mathcal{S} \xrightarrow{\mathcal{F}} \mathbb{L} = \sum_{i=0}^{m} \text{Frame}_i \cdot B^i$$
+
+Trong đó:
+
+$B$: Hệ cơ số động (Base), được xác định bởi độ phân giải của không gian.
+
+$\text{Frame}_i$: Một đoạn mã hóa (gene) chứa thông tin của một vector cơ sở.
+
+**III. GIẢI PHÁP CHO CÁC LỖ HỔNG LOGIC**
+
+1. Cơ chế "Khung Cách Ly" (Frame Insulation) - Giải quyết Tràn số
+
+Để phép cộng mặt nạ số (Masking) không gây tràn số từ "góc" sang "cạnh", chúng ta sử dụng Zero-Padding Guard Bits. Mỗi "gene" hình học được cấu trúc như sau:
+
+[Guard Bits]: Các bit 0 dự phòng để hấp thụ giá trị tràn.
+
+[Data Bits]: Giá trị thực (Độ dài, Góc, Độ xuyên thấu W).
+
+Khi thực hiện phép xoay $\mathbb{L}_{new} = \mathbb{L} + M$, các bit tràn sẽ chỉ rơi vào vùng Guard Bits, bảo vệ tính toàn vẹn của các đoạn dữ liệu lân cận.
+
+2. Hàm Liên Tục (Fractal Smoothing) - Giải quyết tính Song ánh
+
+Để tránh việc vật thể bị "nổ tung" khi biến thiên nhỏ trên $\mathbb{L}$, chúng ta áp dụng Biến đổi Wavelet lên đường cong Hilbert. Thay vì ánh xạ điểm-điểm, chúng ta ánh xạ Vùng-vùng.
+
+Khi $\Delta \mathbb{L} \to 0$, sự thay đổi trong không gian $n$D được nội suy thông qua hàm mật độ, đảm bảo tính liên tục của cấu trúc.
+
+3. Phép toán $O(1)$ trong thực tế
+
+Dù tính toán trên số cực lớn là $O(M)$, nhưng LGC hướng tới kiến trúc Parallel Bit-Processing. Thay vì nhân ma trận tuần tự, máy tính xử lý số $\mathbb{L}$ như một dòng chảy bit (bit-stream). Phép cộng $M$ bit thực hiện đồng thời trên phần cứng chuyên dụng sẽ tiệm cận $O(1)$ về mặt thời gian logic.
+
+**IV. PHÂN TÍCH "VÂN TAY" (GEOMETRIC FINGERPRINTING)**
+
+1. Phép vi phân hình học
+
+Định nghĩa đạo hàm không gian trên số $\mathbb{L}$:
+
+$$\frac{d\mathbb{L}}{dt} = \lim_{\Delta t \to 0} \frac{\mathbb{L}(t+\Delta t) - \mathbb{L}(t)}{\Delta t}$$
+
+Số nguyên tố $\mathbb{L}$: Đại diện cho vật thể Nguyên tử (Atomic). Không thể cắt hay phân rã mà không làm mất tính chất cơ bản.
+
+Ước số chung lớn nhất $GCD(\mathbb{L}_1, \mathbb{L}_2)$: Đại diện cho Cấu trúc chung (Shared Geometry). Nếu hai số có GCD lớn, chúng chia sẻ cùng một khung xương hình học.
+
+2. Quan hệ topology qua phép chia Modular
+
+Nếu $\mathbb{L} \equiv 0 \pmod 2$: Vật thể là một đường cong kín (Closed-loop).
+
+Nếu $\mathbb{L} \equiv r \pmod k$: Vật thể có tính đối xứng bậc $k$.
+
+**V. VÍ DỤ THỰC NGHIỆM: TAM GIÁC BIẾN ĐỔI**
+
+Mã hóa khung: Sử dụng hệ cơ số $B = 2^{32}$. Mỗi khung 32-bit chứa [16 bit độ dài | 16 bit góc].
+Tam giác đều cạnh 1, các góc $0^\circ, 120^\circ, 240^\circ$:
+
+$$\mathbb{L} = [1|0]_{32} + [1|120]_{31} + [1|240]_{30} \dots$$
+
+Xoay $30^\circ$:Cộng mặt nạ $M = [0|30]_{32} + [0|30]_{31} + [0|30]_{30}$.Nhờ vùng đệm 16-bit, giá trị $240+30=270$ không bao giờ xâm lấn sang bit của "độ dài".
+
+
