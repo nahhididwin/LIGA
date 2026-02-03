@@ -5,7 +5,7 @@ Linear Information Geometric Alignment. Linearizes complex nonlinear geometric s
 
 + https://github.com/nahhididwin/LIGA/tree/main/files(experiment)
 
-+ 
++ https://github.com/nahhididwin/LIGA/tree/main/files
 
 # Author :
 
