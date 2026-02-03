@@ -1,3 +1,5 @@
+# Lý thuyết
+
 **I. Giả thuyết trung tâm (The Core Hypothesis)**
 
 Mọi cấu trúc hình học phức tạp $\mathcal{S}$ trong không gian $\mathbb{R}^n$ đều có thể được biểu diễn bằng một hàm số $\mathcal{F}$ duy nhất. Hàm số này có thể được mã hóa thành một số thực siêu lớn $\mathbb{L}$, đại diện cho độ dài của một sợi dây thẳng trong không gian $\mathbb{1}$D.
