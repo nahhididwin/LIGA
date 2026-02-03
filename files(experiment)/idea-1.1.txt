@@ -68,3 +68,62 @@ $$\mathbb{L} = [1|0]_{32} + [1|120]_{31} + [1|240]_{30} \dots$$
 Xoay $30^\circ$:Cộng mặt nạ $M = [0|30]_{32} + [0|30]_{31} + [0|30]_{30}$.Nhờ vùng đệm 16-bit, giá trị $240+30=270$ không bao giờ xâm lấn sang bit của "độ dài".
 
 
+# Chứng minh rằng phép Tịnh tiến (Translation) trong không gian $n$D tương đương với một phép Dịch bit (Bit-shift) hoặc cộng hằng số trên $\mathbb{L}$ :
+
+Chứng minh: Tính tương đương của Phép tịnh tiến trong LGC
+
+1. Tiền đề: Cấu trúc hóa "Origin Frame"
+
+Trong hệ thống LGC, chúng ta không coi vật thể là một tập hợp các điểm rời rạc, mà coi nó là một Cấu trúc tự thân gắn vào một Gốc tọa độ (Anchor Point).
+
+Giả sử $\mathbb{L}$ được cấu tạo bởi:
+
+$\text{Frame}_0$: Lưu trữ vị trí tuyệt đối của Gốc $\mathbf{P}_0 (x, y, z)$.
+
+$\text{Frame}_{1 \dots n}$: Lưu trữ các vector hình thái (độ dài, góc) tương đối so với Gốc.
+
+$$\mathbb{L} = \text{Frame}_0 + \sum_{i=1}^{m} \text{Frame}_i \cdot B^i$$
+
+2. Trường hợp 1: Tịnh tiến là Phép cộng hằng số (Constant Addition)
+
+Xét phép tịnh tiến vật thể $\mathcal{S}$ theo vector $\mathbf{v} = (\Delta x, \Delta y, \Delta z)$.
+
+Chứng minh:
+
+Trong không gian $n$D, phép tịnh tiến chỉ tác động lên vị trí của Gốc $\mathbf{P}_0$, giữ nguyên các quan hệ nội tại ($\text{Frame}_{i>0}$ không đổi).
+
+Giá trị của $\text{Frame}_0$ mới: $\text{Frame}'_0 = \text{Frame}_0 + \Delta \text{Frame}(\mathbf{v})$.
+
+Khi đó:
+
+$$\mathbb{L}_{new} = \text{Frame}'_0 + \sum_{i=1}^{m} \text{Frame}_i \cdot B^i = \mathbb{L} + (\text{Frame}'_0 - \text{Frame}_0)$$
+
+Đặt $K = \text{Frame}'_0 - \text{Frame}_0$. Vì $\mathbf{v}$ là hằng số, $K$ là hằng số.
+
+$\Rightarrow$ Kết luận: Tịnh tiến tương đương với $\mathbb{L} + K$.
+
+3. Trường hợp 2: Tịnh tiến là Phép dịch bit (Bit-shift)
+
+Phép dịch bit (ví dụ $\mathbb{L} \ll k$) tương đương với phép nhân với $B^k$. Điều này xảy ra khi ta thực hiện tịnh tiến trong Không gian Phân bậc (Recursive/Fractal Space).
+
+Chứng minh:
+
+Giả sử ta sử dụng đường cong lấp đầy không gian Morton (Z-order curve). Morton code cho phép tịnh tiến theo lũy thừa của 2 bằng cách dịch chuyển vị trí các bit xen kẽ.
+
+Trong LGC, nếu hệ cơ số $B$ đại diện cho một "Ô không gian" (Voxel), việc nhân $B$ cho $\mathbb{L}$ thực chất là đẩy vật thể từ mức chi tiết $i$ lên mức chi tiết $i+1$ hoặc đẩy nó sang ô lân cận trong cấu trúc cây (Octree/Quadtree).
+
+Nếu cấu trúc "Gene" được thiết kế sao cho mỗi bước nhảy bit tương ứng với một đơn vị lưới (Unit Grid), thì:
+
+$$\text{Translation}(S, \text{Grid\_Unit}) \equiv \mathbb{L} \cdot B^1 \equiv \text{Bit-shift by } \log_2(B)$$
+
+Trong đồ họa truyền thống, để tịnh tiến $1,000,000$ đỉnh (vertices), bạn phải thực hiện $1,000,000$ phép cộng vector.
+
+Với LGC:
+
+Bạn chỉ thực hiện duy nhất 1 phép cộng trên số nguyên siêu lớn $\mathbb{L}$.
+
+Hệ thống Guard Bits mà bạn đề xuất đóng vai trò cực kỳ quan trọng ở đây: Nó ngăn chặn việc giá trị tịnh tiến của Gốc ($\text{Frame}_0$) "tràn" vào và làm biến dạng các đoạn mã hóa hình thái ($\text{Frame}_1$).
+
+Ví dụ: Nếu không có Guard Bits, một phép tịnh tiến quá xa có thể khiến "chiều dài cạnh" của tam giác bị tăng lên một cách vô lý. Vùng đệm bit của bạn đóng vai trò là "bức tường vật lý" trong thế giới số.
+
+
