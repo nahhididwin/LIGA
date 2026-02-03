@@ -180,3 +180,37 @@ Thanh ghi siêu rộng (Ultra-wide Registers): Có khả năng chứa hàng tri�
 Đơn vị dịch bit tịnh tiến (Shifting Units): Xử lý tịnh tiến và xoay mà không cần bộ nhớ đệm.
 
 Bộ lọc Topo: Thực hiện các phép chia Modular để kiểm tra tính đóng/mở của vật thể ngay trên đường truyền dữ liệu.
+
+# Bổ sung mở rộng :
+
+**1. Giải pháp cho Nhiệm vụ "Khả nghịch" (Reversibility)**
+
+Vấn đề: Làm sao để cộng/trừ/nhân trên $\mathbb{L}$ mà khi dùng $\mathcal{F}^{-1}$ lấy dữ liệu ra, hình dạng không bị biến dạng?
+
+Giải pháp: Hệ tiên đề "Bit-Boundary": Bạn cần định nghĩa một "Ngưỡng an toàn" (Safety Threshold) cho mỗi Frame.
+
+Giả sử mỗi Frame có $k$ bits dữ liệu và $g$ bits bảo vệ (Guard Bits).
+
+Điều kiện khả nghịch: Một phép toán $Op(\mathbb{L}, M)$ được coi là khả nghịch nếu và chỉ nếu giá trị cực đại của phép toán đó trên mỗi Frame không vượt quá $2^{k+g} - 1$.
+
+Chứng minh bằng số học:
+Khi bạn thực hiện tịnh tiến bằng phép cộng $K$:
+
+$$\text{Frame}_{i}^{new} = (\lfloor \frac{\mathbb{L} + K}{B^i} \rfloor \pmod B)$$
+
+Nếu $K$ được thiết kế sao cho các bit của nó chỉ tác động vào đúng vị trí của Frame_0 (Gốc tọa độ), nhờ Guard Bits, các bit từ $i=1$ đến $n$ sẽ hoàn toàn không thay đổi.
+=> Kết luận: Tính khả nghịch được bảo toàn bằng cách "cô lập tác động" (Impact Isolation).
+
+
+**2. Giải pháp cho Nhiệm vụ "Phép chiếu" (Projection) - "Trùm cuối"**
+
+Vấn đề: Phép chiếu 3D -> 2D (Perspective Projection) yêu cầu phép chia cho $Z$ ($x' = x/z, y' = y/z$). Trong số học, chia một số BigInt cho một số khác sẽ làm đảo lộn toàn bộ cấu trúc bit.
+
+Ý tưởng đột phá: Phép chiếu trong không gian Logarit hoặc Tọa độ thuần nhất (Homogeneous Coordinates).Thay vì thực hiện phép chia sau khi có $\mathbb{L}$, chúng ta nhúng giá trị "tỷ lệ" vào chính hệ cơ số động.
+
+Công thức đề xuất: $\mathbb{L}_{projected} = \mathbb{L} \gg \text{Scale}(\mathbb{L}_{depth})$
+
+Nếu bạn cấu trúc $\mathbb{L}$ sao cho độ sâu ($z$) nằm ở một Frame đặc biệt, phép chiếu có thể trở thành một phép Dịch bit có điều kiện (Conditional Bit-shift).
+
+Vật thể càng xa ($z$ lớn), toàn bộ chuỗi bit $\mathbb{L}$ sẽ được dịch chuyển (Shift) để co lại về mặt giá trị, mô phỏng hiệu ứng xa gần.
+
