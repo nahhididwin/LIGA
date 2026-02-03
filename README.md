@@ -14,3 +14,8 @@ Full name : Dang Dinh Phu Hung (Đặng Đình Phú Hưng)
 Nation : Vietnam
 
 Date of birth: 20/06/2011 (DD/MM/YYYY)
+
+
+# License :
+
+https://github.com/nahhididwin/LIGA?tab=License-1-ov-file
