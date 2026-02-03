@@ -1,2 +1,8 @@
 Coi mọi hình dáng hình học (Hình vuông, lập phương,...) từ 1D -> n-chiều là từ 1 sợi dây tạo thành. Sợi dây này khi buộc lại đúng cách sẽ tạo ra "điểm". Và đoạn thẳng AB
 tại không gian 1D, có 2 điểm ở 2 đầu và 1 cạnh ở giữa. Còn hình vuông thì có 4 điểm và 4 cạnh.
+
+
+
+Ta giả định có 1 compiler siêu cấp là 1 sợi dây "rối"/"mù" và sau khi đi qua compiler nó lập tức trở thành sợi dây thẳng hoàn toàn (1D) có "quy luật", mà quy luật được chứa ở độ dài sợi dây và bản thân sợi dây.
+
+Sau đó ta chỉ cần thực hiện các phép tính cơ bản/nhanh như so sánh độ dài sợi dây, nhìn vào sợi dây,.... để có thể tính toán siêu nhanh n-chiều. Và cũng như hiểu về n-chiều dễ dàng hơn.
