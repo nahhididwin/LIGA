@@ -3,6 +3,10 @@ Linear Information Geometric Alignment. Linearizes complex nonlinear geometric s
 
 # Access : 
 
++ https://github.com/nahhididwin/LIGA/tree/main/files(experiment)
+
++ 
+
 # Author :
 
 Full name : Dang Dinh Phu Hung (Đặng Đình Phú Hưng)
