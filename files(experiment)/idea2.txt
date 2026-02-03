@@ -1,0 +1,2 @@
+Coi mọi hình dáng hình học (Hình vuông, lập phương,...) từ 1D -> n-chiều là từ 1 sợi dây tạo thành. Sợi dây này khi buộc lại đúng cách sẽ tạo ra "điểm". Và đoạn thẳng AB
+tại không gian 1D, có 2 điểm ở 2 đầu và 1 cạnh ở giữa. Còn hình vuông thì có 4 điểm và 4 cạnh.
