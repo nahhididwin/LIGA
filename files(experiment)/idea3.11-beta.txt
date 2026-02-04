@@ -2,7 +2,7 @@
 
 **Định chế số hóa hình thái nhất thể & kiến trúc tính toán logic hình học**
 
-> Phiên bản: 1.0 — Whitepaper chính thức (viết lại hoàn thiện, kèm định nghĩa và chứng minh chặt chẽ).
+Github : https://github.com/nahhididwin/LIGA/
 
 ---
 
