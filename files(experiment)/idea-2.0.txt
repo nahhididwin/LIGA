@@ -104,6 +104,8 @@ Phase Adder Array: Bộ cộng song song chuyên dụng cho các phân đoạn $
 
 Bitwise Topology Engine: Đơn vị xử lý Boolean tốc độ cao dựa trên mặt nạ bit.
 
+Hiện nay chúng ta đã có FPGA, ASIC.
+
 **7. KẾT LUẬN**
 
 LGC không chỉ là một lý thuyết toán học; nó là một phương thức tái định nghĩa cách máy tính "nhìn" và "hiểu" hình thái. Bằng cách chuyển đổi hình học từ miền liên tục sang miền số học rời rạc nhưng có cấu trúc cao, chúng ta mở ra kỷ nguyên của đồ họa thời gian thực không giới hạn đa giác và các hệ thống mô phỏng vật lý với độ trễ bằng không...
