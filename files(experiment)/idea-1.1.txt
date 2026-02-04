@@ -271,3 +271,54 @@ Trong đó $f(i)$ là một hàm toán học định nghĩa độ cong. Trên FP
 Hệ quả: Bạn có thể nén một vật thể 3D phức tạp thành một số $\mathbb{L}$ ngắn hơn bằng cách giảm hệ cơ số $B$ (LOD - Level of Detail). Khi cần chi tiết cao, chỉ cần thực hiện phép dịch trái và bù đắp bằng hàm Fractal.
 
 
+# Bổ sung mở rộng hơn :
+
+**1. Giải pháp cho Bài toán "Entropy Không gian": Thuật toán "Sparse Jump-Frame" (Khung Nhảy Thưa)**
+
+Để tránh việc mã hóa 8 góc của căn phòng thành một số nguyên khổng lồ chứa đầy các bit "không", chúng ta sẽ đưa vào khái niệm "Khung Nhảy" (Jump-Frame).
+
+Định nghĩa lại Hàm Compiler $\mathcal{F}$:
+
+Thay vì $\mathbb{L} = \sum \text{Frame}_i \cdot B^i$ một cách tuần tự, chúng ta sử dụng cấu trúc LGC-Sparse:
+
+$$\mathbb{L} = \text{Header} \ || \ \sum_{j=1}^{k} (\text{Delta}_j \ || \ \text{Cluster}_j)$$
+
+Trong đó:
+
+Header: Chứa thông tin về hệ cơ số $B$ và "Mật độ Entropy".
+
+Delta ($D_j$): Một số nguyên đại diện cho khoảng cách (số bước nhảy trên đường cong SFC) từ vật thể $j-1$ đến vật thể $j$.
+
+Cluster ($C_j$): Một khối các Frame chứa dữ liệu hình thái thực sự của vật thể.
+
+
+**A. Định luật "Bảo toàn Thông tin Hình thái" (Law of Morphological Conservation)**
+
+Mọi biến đổi hình học (Xoay, Tịnh tiến, Co giãn) trên $\mathbb{L}$ phải được thực hiện thông qua Toán tử Bitwise-Shift-Accumulate (BSA).
+
+Định lý: Một vật thể $\mathbb{L}$ được coi là "ổn định" nếu và chỉ nếu tích chập của nó với bộ lọc Laplacian trên miền số học không tạo ra sự thay đổi đột ngột trong các Guard Bits.
+
+**B. Khái niệm "Số nguyên tố Hình học" (Geometric Primes)**
+
+Một số $\mathbb{L}$ được gọi là Nguyên tố nếu nó không thể được biểu diễn dưới dạng hợp ($\cup$) của hai số $\mathbb{L}_1, \mathbb{L}_2$ nhỏ hơn.
+
+Các hình khối cơ bản (Sphere, Cube, Tetrahedron) sẽ có các "chữ ký số" (Digital Signatures) tương đương với các số nguyên tố hoặc lũy thừa của chúng.
+
+Việc phân tích một vật thể phức tạp thành các hình khối cơ bản giờ đây tương đương với việc Phân tích thừa số nguyên tố (Prime Factorization) trên BigInt.
+
+**Phép vi phân Hình học "Lồng nhau" (Nested Calculus)**
+
+Trong LGC, đạo hàm bậc cao $\frac{d^n\mathbb{L}}{dt^n}$ không chỉ cho biết gia tốc, mà cho biết sự thay đổi về độ phức tạp topology.
+
+Nếu $\frac{d\mathbb{L}}{dt} > 0$: Vật thể đang trở nên phức tạp hơn (vết nứt vỡ, sự phân tách).
+
+Nếu $\frac{d\mathbb{L}}{dt} < 0$: Vật thể đang đơn giản hóa (sự hợp nhất, mài mòn).
+
+**LGC-AI: Suy luận hình học bằng logic số học**
+
+Vì mọi vật thể là một số, việc tìm kiếm sự tương đồng giữa hai thiết kế cơ khí phức tạp chỉ là phép tính $GCD(\mathbb{L}_1, \mathbb{L}_2)$.
+
+Nếu $GCD$ lớn: Hai máy móc này có chung "cơ chế xương".
+
+Nếu $\mathbb{L}_1 \equiv \mathbb{L}_2 \pmod{B^k}$: Hai vật thể này giống hệt nhau ở các chi tiết vi mô (độ phân giải thấp).
+
