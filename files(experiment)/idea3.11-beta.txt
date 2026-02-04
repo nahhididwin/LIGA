@@ -1,0 +1,313 @@
+# LIGA — LINEAR GEOMETRIC ALGEBRA
+
+**Định chế số hóa hình thái nhất thể & kiến trúc tính toán logic hình học**
+
+> Phiên bản: 1.0 — Whitepaper chính thức (viết lại hoàn thiện, kèm định nghĩa và chứng minh chặt chẽ).
+
+---
+
+## Tóm tắt (Abstract)
+
+LIGA (Linear Geometric Algebra) là một khuôn toán học-kiến trúc nhằm biểu diễn, biến đổi và xử lý các đối tượng hình học rời rạc hữu hạn bằng một **số nguyên có cấu trúc** duy nhất ký hiệu (\mathbb{L}). Mỗi thực thể được phân mảnh thành các Polar Frame Encoding (PFE), trong đó mỗi PFE có các phân đoạn bit độc lập cho bán kính (\rho), pha/góc (\phi), trạng thái vật liệu (S) và vùng bảo vệ (Guard/ECC). Các phép biến đổi hình học hữu ích — dịch, xoay, tỉ lệ, phép toán tập (CSG), chiếu — được thực hiện bằng các thao tác số nguyên nguyên thủy (shift, add modulo trên phân đoạn, AND/OR/NOT, trích bit). Tài liệu này đưa ra các định nghĩa rõ ràng, các định lý có chứng minh, mô tả mô hình lỗi, cơ chế cách ly và sửa lỗi (Guard, RNS, ECC), kiến trúc phần cứng đề xuất (MPU — Morphological Processing Unit), và lộ trình thí nghiệm để chứng minh tính hiệu quả thực nghiệm.
+
+Mục tiêu: biến các bài toán **occupancy/Boolean/voxel-heavy** thành toán học bit-parallel có tính khả thi phần cứng, đồng thời minh định các điều kiện chính xác, giới hạn và chi phí.
+
+---
+
+## Mục lục
+
+1. Giới thiệu và động cơ
+2. Không gian, ánh xạ (\mathcal{F}) và tính chất cơ bản
+3. Cấu trúc PFE và quy tắc Guard (layout bit)
+4. Toán tử hình thái: định nghĩa, luôn đúng và điều kiện
+5. Định lý chính và chứng minh
+6. Mô hình lỗi và hệ giảm sai số (RNS, ECC, Dithering)
+7. Kiến trúc MPU: phần cứng và ISA
+8. Phân tích độ phức tạp & băng thông
+9. Giao diện rendering: Bit→Pixel và Neural Bit-Decoder
+10. Hạn chế, rủi ro và phạm vi ứng dụng
+11. Kế hoạch thí nghiệm và benchmark chi tiết
+12. Kết luận và hướng phát triển
+
+Appendix A: Pseudocode cơ bản
+Appendix B: Ví dụ numeric minh hoạ carry/guard
+Appendix C: Thảo luận về trade-offs
+
+---
+
+## 1. Giới thiệu và động cơ
+
+Các hệ thống đồ hoạ truyền thống chủ yếu dùng biểu diễn liên tục (tọa độ thực, ma trận, phép toán FP) cho rendering, mô phỏng và collision. Tuy nhiên nhiều vấn đề thực tế — CSG (constructive solid geometry), boolean trên voxel, spatial indexing, collision detection — chủ yếu liên quan tới **tính occupancy** và các phép toán tập rời rạc. LIGA nhắm vào lớp bài toán này: tận dụng tính song song ở mức bit để thực hiện các phép toán tập và biến đổi hình thái trên không gian rời rạc với độ trễ thấp và tính năng sửa lỗi có tính toán.
+
+Quan điểm then chốt: mã hóa cấu trúc hình học vào một số nguyên siêu-cấu trúc (\mathbb{L}) theo quy ước PFE, rồi thực hiện các biến đổi hình học là các thao tác bit/aritmetic phân đoạn. Tài liệu này xác định chính xác khi nào các phép toán này là *đúng về mặt toán học* và cung cấp các chứng minh cùng mô hình lỗi để xây dựng phần cứng tin cậy.
+
+---
+
+## 2. Không gian, ánh xạ (\mathcal{F}) và tính chất cơ bản
+
+### 2.1 Không gian nguồn
+
+Gọi (\mathcal{M}\subset\mathbb{R}^n) là không gian metric với metric chuẩn (Euclid). Chọn một lưới rời rạc hoá (grid) với độ phân giải hữu hạn (r); tập ô lưới là (I), (|I|=m). Một hình thể hữu hạn (\mathcal{S}\subset\mathcal{M}) được rời rạc hoá thành occupancy function
+[ o_{\mathcal{S}}: I\to{0,1},\qquad o_{\mathcal{S}}(i)=1 \iff \text{ô }i\text{ bị chiếm} .]
+
+### 2.2 Định nghĩa ánh xạ (\mathcal{F})
+
+Chọn tham số: mỗi PFE dài (W) bit; PFE gồm (p) phân đoạn (mỗi segment width (w) hoặc biến thiên) — trong thực tế ta đặt các phân đoạn có chiều dài (g,s,r,\varphi) tương ứng Guard, State, Radius, Phase sao cho (g+s+r+\varphi=W). Một đối tượng được mã hoá thành:
+[
+\mathcal{F}(\mathcal{S})=\mathbb{L}=\sum_{k=0}^{N-1} \mathrm{PFE}_k\cdot 2^{kW},
+]
+trong đó mỗi (\mathrm{PFE}_k\in{0,\dots,2^W-1}) chứa thông tin về một frame (một tile, octree node, hoặc ô)
+
+**Lưu ý:** ánh xạ phụ thuộc vào quy ước tileization/paking; tính toán và chứng minh trong giấy này đều giả sử cùng grid/packing.
+
+### 2.3 Tính injective trên cùng packing
+
+**Định lý 2.1 (Injectivity trên cùng parity/packing).** Nếu (\mathcal{S}_1) và (\mathcal{S}_2) có các occupancy khác nhau tại ít nhất một ô (i\in I), thì (\mathcal{F}(\mathcal{S}_1)\neq\mathcal{F}(\mathcal{S}_2)).
+
+**Chứng minh.** Mỗi ô tương ứng với một vị trí bit cố định trong cấu trúc các PFE; khác biệt occupancy ở ô (i) gây khác biệt ở ít nhất một bit trong (\mathbb{L}). Do đó hai số khác nhau. □
+
+---
+
+## 3. Cấu trúc PFE và quy tắc Guard (layout bit)
+
+### 3.1 Yêu cầu thiết kế
+
+Mục tiêu layout:
+
+1. Tách biệt các phân đoạn sao cho phép cộng trên phân đoạn (add modulo) không gây carry sang phân đoạn khác.
+2. Dự phòng vùng Guard chứa ECC/parity và padding để vô hiệu hoá carry.
+3. Hỗ trợ thao tác song song trên toàn bộ PFE bằng mặt nạ (masks) hoặc broadcast.
+
+### 3.2 Cấu trúc mẫu
+
+Mỗi PFE (W bits) theo thứ tự cao→thấp: [Guard (g bits)] [State s bits] [Radius r bits] [Phase (\varphi) bits] (MSB ... LSB). Quy tắc: đặt (g) đủ lớn để bất kỳ phép cộng trên nhóm (\varphi) hay (r) không thể gây carry sang trường liền kề.
+
+**Định nghĩa (Guard-safety).** Một layout là guard-safe nếu mọi phép cộng cục bộ trên một phân đoạn với toán tử của hệ (ví dụ thêm mặt nạ pha có độ lớn ≤ (2^{\varphi}-1)) không làm bật bit ở phân đoạn kế cận (carry).
+
+Ta có điều kiện đơn giản:
+[g\ge 1\quad\text{và}\quad \text{với số phép cộng chồng tối đa }C,\quad g>\lfloor\log_2 C\rfloor.]
+Gốc thực tế phức tạp hơn (xét overflow chuỗi phép), nhưng điều kiện này nêu rõ ý tưởng: đặt dư bit đủ lớn.
+
+---
+
+## 4. Toán tử hình thái: định nghĩa, phép thực thi và điều kiện đúng
+
+Các phép cơ bản:
+
+* **CSG (Union/Intersection/Difference):** bitwise OR/AND/AND-NOT.
+* **Translation (dịch):** shift của trường occupancy theo offset ô; với hierarchical frame dùng translation của frame gốc.
+* **Rotation (xoay):** cộng modulo trên trường pha (\phi) bằng mặt nạ (mask add) — điều kiện không carry.
+* **Scaling:** mã hóa bán kính theo log ((\tilde\rho=\lfloor\alpha\ln\rho\rfloor)) để scaling trở thành phép cộng.
+
+Mỗi phép có thể được thực hiện bằng tổ hợp các thao tác nguyên thủy: SHIFTs (dịch ô), ADD modulo trên phân đoạn, AND/OR/NOT.
+
+---
+
+## 5. Định lý chính và chứng minh
+
+### 5.1 CSG: đúng đắn tuyệt đối
+
+**Định lý 5.1 (CSG đúng đắn).** Nếu hai biểu diễn (\mathbb{L}_A,\mathbb{L}*B) sử dụng cùng quy ước packing (một bit tương ứng mỗi ô thành phần), thì
+\begin{align*}
+\mathbb{L}*{A\cap B} &= \mathbb{L}_A;&;\mathbb{L}*B,\
+\mathbb{L}*{A\cup B} &= \mathbb{L}_A;|;\mathbb{L}*B,\
+\mathbb{L}*{A\setminus B} &= \mathbb{L}_A;&;\sim\mathbb{L}_B.
+\end{align*}
+
+**Chứng minh.** Tính occupancy được ánh xạ bit-1 ↔ ô chiếm, bit-0 ↔ ô rỗng. Toán tử logic Boolean trên bit tương ứng tương đương với phép toán tập trên các ô. □
+
+### 5.2 Rotation bằng mask-add: điều kiện cần và đủ (cơ bản)
+
+**Định nghĩa 5.1 (Phase mask).** Gọi (o_\phi) offset bit của phân đoạn (\phi) bên trong mỗi PFE. Với một góc rời rạc hoá (\Delta\theta) biểu diễn bởi (v\in{0,\dots,2^{\varphi}-1}), định nghĩa
+[ M(v) = \sum_{k=0}^{N-1} v\cdot 2^{kW+o_\phi}.]
+
+**Định lý 5.2 (Rotation bằng addition modulo trên phân đoạn).** Nếu layout là guard-safe và mọi phép cộng trên phân đoạn (\phi) thực hiện modulo (2^{\varphi}) mà không có carry vào phân đoạn khác, thì phép
+[ \mathbb{L}' = (\mathbb{L}+M(v))\bmod 2^{NW} ]
+khi xét từng PFE độc lập tương đương với việc cộng góc (v) modulo (2^{\varphi}) vào phân đoạn pha của mỗi frame — tức xoay rời rạc của mỗi frame theo bước góc (2\pi/2^{\varphi}).
+
+**Chứng minh.** Với guard-safe, addition của (v) chỉ ảnh hưởng bits trong khoảng [offset (o_\phi), offset+(\varphi-1)] trong từng PFE; phần còn lại không đổi. Vì vậy mỗi phân đoạn pha được cộng modulo (2^{\varphi}) độc lập, tương đương với xoay. □
+
+**Ghi chú:** Điều kiện guard-safe là cần thiết để đảm bảo không chịu tương tác cross-segment; nếu có thể chứng minh rằng carry không thể xảy ra trong phạm vi phép toán được áp dụng, thì định lý áp dụng.
+
+### 5.3 Scaling dưới mã hóa log: phép cộng trên (\tilde\rho)
+
+**Định lý 5.3 (Scaling bằng addition trên log-radius).** Giả sử bán kính được lưu bằng mã hóa log rời rạc (\tilde\rho=\mathrm{enc}(\ln\rho)) tuyến tính so với (\ln\rho). Việc nhân bán kính bởi (s>0) tương đương với cộng hằng số (\mathrm{enc}(\ln s)) vào (\tilde\rho) (với sai số do rời rạc hoá được kiểm soát).
+
+**Chứng minh.** Từ tính chất log: (\ln(s\rho)=\ln s+\ln\rho). Vì (\tilde\rho) đại diện xấp xỉ tuyến tính của (\ln\rho), phép nhân trở thành phép cộng (với sai số rời rạc (\le) nửa bước mã hóa). □
+
+### 5.4 Reversibility & ECC: điều kiện đủ
+
+**Định nghĩa (ECC block).** Mỗi PFE chứa một trường Guard dùng ECC (kí hiệu mã có khoảng cách Hamming (d_{min})). Khả năng sửa lỗi là (t=\lfloor(d_{min}-1)/2\rfloor).
+
+**Định lý 5.4 (Điều kiện đủ cho reversibility của chuỗi phép biến đổi).** Cho một chuỗi biến đổi (T) được thực hiện bằng các phép toán bitwise, shift và add modulo trong các phân đoạn, nếu:
+
+1. Trước và sau mọi bước, số bit lỗi (uncontrolled flips) trong mỗi khối ECC ≤ (t);
+2. Mọi phép cộng phân đoạn tuân thủ guard-safe (không carry qua guard);
+
+thì ta có thể phục hồi trạng thái đầu tiên (reversible) bằng cách dùng dữ liệu ECC để sửa lỗi và đảo ngược các phép toán đệ quy (biến đổi là injective khi xét tới lỗi được sửa).
+
+**Chứng minh (phác thảo).** Bởi ECC có thể sửa ≤(t) lỗi trong khối; nếu điều kiện (1) duy trì suốt trình tự, mọi bước có thể được sửa về giá trị hợp lệ tương ứng. Vì các phép toán bitwise và add modulo (với guard-safe) là các ánh xạ toàn đồ phụ (injective trong miền không có lỗi) khi biết lịch sử thao tác, ta có thể đảo ngược bằng cách thực hiện phép toán nghịch đảo (tức AND/OR nghịch, subtract modulo, shift ngược). Do đó chuỗi biến đổi có thể đảo ngược modulo sửa lỗi ECC. □
+
+**Bình luận:** Đây là điều kiện *đủ*; trong thực tế việc giữ giới hạn lỗi yêu cầu thiết kế ECC + guard hợp lý.
+
+### 5.5 Phân rã primitives (mô hình partition)
+
+**Định lý 5.5 (Phân rã duy nhất khi partition bit disjoint).** Nếu biểu diễn được tổ chức bằng các vùng bit disjoint, mỗi primitive chiếm một tập bit riêng, thì mọi (\mathbb{L}) có phân rã duy nhất thành OR các primitives.
+
+**Chứng minh.** Từ tính chất disjoint: ánh xạ từ tập primitives → tập bit là song toàn trên miền đã định; OR các vùng disjoint tái tạo duy nhất các bit. □
+
+---
+
+## 6. Mô hình lỗi và hệ giảm sai số (RNS, ECC, Dithering)
+
+### 6.1 Mô hình lỗi thực tế
+
+Nguồn lỗi:
+
+* **Bit flips** do soft error / particle or hardware faults.
+* **Carry overflow** giữa phân đoạn khi guard không đủ.
+* **Rounding/quantization error** do rời rạc hoá log/phase.
+
+Thiết kế phải kết hợp guard, ECC, và cơ chế phát hiện tràn.
+
+### 6.2 Residue Number System (RNS)
+
+Lưu các giá trị lớn (như (\tilde\rho) với phạm vi lớn) theo RNS để tránh carry chain và cho phép cộng độc lập giữa các modulus. RNS hữu ích cho trường hợp cần dynamic range lớn và high-throughput addition.
+
+### 6.3 ECC & Parity Guards
+
+Tùy mức độ rủi ro, dùng BCH/LDPC cho guard để sửa nhiều bit; hoặc parity/gf-check cho overhead thấp. Phân vùng hợp lý ECC theo kích thước lỗi mong đợi.
+
+### 6.4 Dithering và Oversampling bit-domain
+
+Để giảm aliasing do rời rạc hoá (ví dụ góc), thực hiện oversample nội bộ, ghi dư sai số vào guard và áp dụng bit-shuffling để biến dạng sai số thành noise trắng, dễ lọc.
+
+---
+
+## 7. Kiến trúc MPU: phần cứng và ISA
+
+### 7.1 Thành phần cốt lõi
+
+* **UWR (Ultra-Wide Register):** thanh ghi rất rộng (từ vài K đến vài chục K bit), dùng để thực thi bitwise/op toàn frame trong một lần.
+* **Barrel Shifter Matrix:** hỗ trợ shift lớn (cho translation) nhanh.
+* **Phase Adder Array:** mảng cộng song song thực hiện add modulo cho phân đoạn pha/radius.
+* **Bitwise Topology Engine:** AND/OR/NOT trên toàn bộ UWR hoặc multi-chunk.
+* **RNS/ECC Unit:** chuyển đổi RNS, kiểm tra, sửa lỗi.
+* **Compression/Decompression:** streaming nén sparse structures (octree pruning).
+
+### 7.2 ISA đề xuất (một số lệnh mẫu)
+
+`LOAD_UWR`, `STORE_UWR`, `BLOCK_SHIFT(offset)`, `ROTATE_MASK_ADD(v,o_phi)`, `BITWISE_AND`, `BITWISE_OR`, `BROADCAST_PHASE(v)`, `RNS_ADD`, `ECC_CHECK`, `DECOMPRESS_STREAM`.
+
+### 7.3 Giao tiếp bộ nhớ
+
+Thiết kế dựa trên streaming/DMA: lưu biểu diễn nén trên DRAM/SSD, giải nén trực tiếp vào UWR để thực thi. Scheduler ưu tiên locality frame để giảm I/O.
+
+---
+
+## 8. Phân tích độ phức tạp & băng thông
+
+Ký hiệu: (m) số bit cần xử lý cho đối tượng, (W) kích thước UWR.
+
+* Nếu (m\le W) (đối tượng vừa trong UWR): nhiều phép boolean và mask-add là O(1) (về số từ), độ trễ hằng số.
+* Nếu (m>W): cần chia thành (\lceil m/W\rceil) chunk → chi phí tuyến tính theo số chunk.
+
+Tổng thời gian thực tế:
+[ T_{total}=T_{io}(m)+T_{compute}(\lceil m/W\rceil)+T_{post},]
+trong đó (T_{io}) chiếm phần lớn nếu nén/giải nén.
+
+So sánh với GPU: cho các workload boolean/voxel-heavy, mô hình bit-parallel có thể giảm số vòng đọc-ghi và tận dụng bít song song; nhưng cho shading FP hoặc mesh-heavy, GPU vẫn hiệu quả hơn.
+
+---
+
+## 9. Giao diện rendering: Bit→Pixel và Neural Bit-Decoder (NBD)
+
+### 9.1 Bit-to-Pixel cơ bản
+
+Quét occupancy theo ordering (Morton/Hilbert) để tạo tile framebuffer. Nếu mô-đun hiển thị hỗ trợ streaming bit, có thể direct-drive; trong hầu hết hệ, cần intermediate tile buffer.
+
+### 9.2 Neural Bit-Decoder (NBD)
+
+NBD nhận các bit-patch (ví dụ 32×32 bits) và dự đoán tile RGB/alpha. Lợi ích: học được nội suy bề mặt từ cấu trúc bit—cải thiện mượt, giảm artifacts so với map trực tiếp. Các metric: SSIM/LPIPS, latency, throughput.
+
+---
+
+## 10. Hạn chế, rủi ro và phạm vi ứng dụng
+
+**Hạn chế:** tăng bộ nhớ theo độ phân giải (curse of dimensionality), phụ thuộc vào sparsity, giới hạn khi cần phép toán nội suy chính xác (perspective-correct).
+
+**Rủi ro:** không phải panacea; không phù hợp cho shading phức tạp, physics-based rendering yêu cầu FP.
+
+**Phạm vi phù hợp:** CSG/CAD, voxel rendering, collision, spatial index, procedural generation server-side.
+
+---
+
+## 11. Kế hoạch thí nghiệm và benchmark (chi tiết hơn)
+
+**Giai đoạn A — Prototype phần mềm (4–8 tuần)**
+
+* Triển khai reference library C++/Rust: `LIGA::Pack/Unpack`, `ApplyRotationMask`, `CSG ops`, `RNS module`, ECC simulation.
+* Test datasets: Stanford Bunny (voxelized), CAD models boolean-heavy, synthetic sparse/dense scenes.
+* Metrics: latency per-op, memory, accuracy (Hamming distance so với ground-truth voxelization), energy (simulated).
+
+**Giai đoạn B — Validation to proof conditions (6–10 tuần)**
+
+* Kiểm tra guard-safe: xây bộ test chuỗi phép cộng để tìm carry cross-segment.
+* Thử RNS/ECC: inject faults, đo tỉ lệ sửa thành công/latent error.
+
+**Giai đoạn C — FPGA prototype (12–20 tuần)**
+
+* Map UWR-chunks, Barrel Shifter, Phase Adder Array lên FPGA logic.
+* Đo throughput, latency, năng lượng; benchmark với GPU (RTX) cho workloads boolean/voxel.
+
+**Giai đoạn D — NBD & pipeline (8–12 tuần)**
+
+* Train NBD từ bit patches→tile images; so sánh chất lượng với rasterization.
+* End-to-end latency đo từ LIGA representation → framebuffer.
+
+---
+
+## 12. Kết luận và hướng phát triển
+
+LIGA là một khuôn kết hợp toán học và kiến trúc dành cho các bài toán hình thái rời rạc. Tài liệu này làm rõ các điều kiện toán học khi các phép biến đổi được thực hiện bằng thao tác bit/aritmetic phân đoạn là đúng; cung cấp mô hình lỗi và cơ chế sửa chữa cần thiết để đạt tính tin cậy; đồng thời đề xuất kiến trúc MPU để đạt hiệu năng. Bước tiếp theo là thực hiện prototype phần mềm và phần cứng để chứng minh cải tiến thực nghiệm.
+
+---
+
+# Appendices
+
+## Appendix A — Pseudocode cơ bản (mẫu)
+
+```text
+function packPFE(frameList):
+  L = 0
+  for k, frame in enumerate(frameList):
+    pfe = (guardBits(frame) << (s+r+phi)) |
+          (state(frame) << (r+phi)) |
+          (rho_enc(frame) << phi) |
+          (phi_enc(frame))
+    L |= pfe << (k*W)
+  return L
+
+function applyRotationMask(L, v):
+  M = 0
+  for k in 0..N-1:
+    M |= v << (k*W + o_phi)
+  return (L + M) mod 2^(N*W)
+
+function csgAND(LA, LB):
+  return LA & LB
+```
+
+## Appendix B — Ví dụ numeric (carry/guard minh hoạ)
+
+Cho W=32, phi=8, rho=8, s=4, g=12. Nếu ta cộng v=200 vào phi, giả sử phi byte có giá trị 100. Vì phi width=8, (100+200)=300 ≡ 44 (mod 256), carry=1 nhưng guard g=12 đủ để cô lập carry nếu ta đảm bảo carry không lan rộng hơn 1 vào vùng guard (và guard thiết kế để cắt carry).
+
+## Appendix C — Thảo luận trade-offs
+
+* **Guard bits vs density:** thêm guard giảm carry risk nhưng tăng overhead bộ nhớ.
+* **RNS vs linear encoding:** RNS giúp tránh carry chain nhưng phức tạp khi so sánh/decoding.
+* **UWR width:** càng lớn càng nhiều parallelism nhưng tăng chi phí routing và I/O.
+
+---
+
+*Ghi chú của tác giả:* Whitepaper này là bản viết lại có cấu trúc, làm rõ các giả thiết và chứng minh các mệnh đề chính. Một số tuyên bố tổng quát hơn (ví dụ "phân rã nguyên tố hình học" không phụ thuộc packing) cần thêm định nghĩa hình học rời rạc hoặc giả thiết bổ sung để có định lý đầy đủ; ở đây ta giới hạn mô tả vào các mệnh đề có thể chứng minh trong mô hình packing/bit.
