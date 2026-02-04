@@ -1,0 +1,110 @@
+# WHITE PAPER: LINEAR GEOMETRIC ALGEBRA (LGC)
+
+Định Chế Số Hóa Hình Thái Nhất Thể & Kiến Trúc Tính Toán Logic Hình Học
+
+**1. TÓM TẮT (ABSTRACT)**
+
+LGC đề xuất một phương pháp luận đột phá: Loại bỏ hoàn toàn ma trận chuyển đổi (Transformation Matrices) và dấu phẩy động (Floating Point) trong đồ họa máy tính. Thay vào đó, chúng tôi biểu diễn mọi thực thể hình học $n$-chiều dưới dạng một Số nguyên siêu cấu trúc (Hyper-structured Integer) duy nhất $\mathbb{L}$. Thông qua việc mã hóa khung cực (Polar Frame Encoding - PFE), các biến đổi hình học phức tạp được rút gọn thành các phép tính số học cơ bản (Addition, Bit-shifting, Masking) trên ALU, hứa hẹn tăng hiệu suất xử lý lên gấp nhiều lần so với kiến trúc GPU hiện tại.
+
+**2. HỆ TIÊN ĐỀ VÀ CƠ SỞ TOÁN HỌC**
+
+2.1. Phép Ánh xạ Nhất thể (The Unified Mapping)
+
+Giả thuyết rằng mọi cấu trúc hình học $\mathcal{S}$ nằm trong một không gian metric đều có thể được đặc tả bởi một chuỗi hữu hạn các tham số trạng thái.
+
+Định nghĩa 1: Ánh xạ $\mathcal{F}: \mathcal{M} \to \mathbb{Z}^+$ là một đơn xạ từ tập các đa tạp hình học vào tập số nguyên dương.
+
+$$\mathbb{L} = \sum_{i=0}^{N} \text{PFE}_i \cdot 2^{W \cdot i}$$
+
+Trong đó $W$ là độ rộng từ dữ liệu (Word size), xác định độ phân giải cực hạn của hệ thống.
+
+2.2. Cấu trúc Khung PFE (Polar Frame Encoding)
+
+Mỗi đơn vị dữ liệu (Frame) không lưu trữ tọa độ Descartes $(x, y, z)$ mà lưu trữ Chữ ký Hình thái:
+
+$$\text{PFE}_i = \{ \underbrace{G}_{Guard} \ || \ \underbrace{S}_{State} \ || \ \underbrace{\rho}_{Radius} \ || \ \underbrace{\phi}_{Phase} \}$$
+
+Guard Bits ($G$): Vùng đệm ngăn hiện tượng tràn bit khi thực hiện cộng tích lũy pha hoặc bán kính.
+
+State Bits ($S$): Chứa thông tin về đặc tính vật liệu, độ xuyên thấu hoặc chỉ số khúc xạ.
+
+Metric $(\rho, \phi)$: Biểu diễn vector vị trí tương đối trong hệ tọa độ cực nội tại của đối tượng cha.
+
+**3. CÁC TOÁN TỬ HÌNH THÁI TRÊN MIỀN SỐ (MORPHOLOGICAL OPERATORS)**
+
+3.1. Phép Dịch chuyển và Tính chất Phân cấp (Translation & Hierarchy)
+
+Trong LGC, việc tịnh tiến một đối tượng không yêu cầu cộng vector cho mọi đỉnh.
+
+Tịnh tiến toàn cục: Thay đổi giá trị $\text{PFE}_0$ (Gốc tọa độ).
+
+Tịnh tiến không gian lưới: Thực hiện phép dịch bit logic (Logical Shift).
+
+$$\mathbb{L}' = \mathbb{L} \ll (\Delta d \cdot \text{Resolution})$$
+
+3.2. Phép Xoay Đồng bộ (Synchronous Rotation)
+
+Đây là điểm đột phá nhất của LGC. Vì $\phi$ được lưu trữ trong một phân đoạn bit cố định cho mọi Frame, việc xoay toàn bộ vật thể góc $\Delta \theta$ tương đương với việc cộng một Mặt nạ Xoay (Rotation Mask) $M_{\theta}$.
+
+$$M_{\theta} = \bigoplus_{i=1}^{N} (\Delta \theta \cdot 2^{offset(\phi_i)})$$
+
+$$\mathbb{L}_{rotated} = (\mathbb{L} + M_{\theta}) \pmod{2^W}$$
+
+Guard bits đảm bảo rằng nếu $\phi + \Delta \theta > 2\pi$, phần dư sẽ bị triệt tiêu hoặc chuyển hóa mà không làm biến dạng giá trị $\rho$.
+
+3.3. Phép Co giãn Isotropic (Scaling)
+
+Phép co giãn được thực hiện bằng cách nhân trực tiếp $\mathbb{L}$ với hệ số tỷ lệ $s$ trong miền logarit hoặc thông qua bộ nhân song song trên các phân đoạn $\rho$.
+
+**4. GIẢI QUYẾT TÍNH TOPO VÀ CHIẾU HÌNH**
+
+4.1. Chiếu Hình không dùng phép chia (Division-free Projection)
+
+Phép chiếu từ $n \to n-1$ chiều thường yêu cầu phép chia cho $z$ (depth). LGC sử dụng Hệ cơ số Logarit tự nhiên cho trọng số của Frame.
+Phép chiếu lúc này trở thành phép trích xuất cửa sổ bit (Bit-window extraction):
+
+$$\text{Proj}(\mathbb{L}) = \text{BitExtract}(\mathbb{L}, \text{Scale\_Function}(z))$$
+
+4.2. Số học Boolean (Bitwise CSG)
+
+Cấu tạo của $\mathbb{L}$ dựa trên các đường cong lấp đầy không gian (như Morton Order hay Hilbert Curve). Điều này cho phép các phép toán hợp/giao/hiệu của hình học (CSG) trở thành các phép toán logic nhị phân nguyên thủy:
+
+Giao ($A \cap B$): L_A & L_B
+
+Hợp ($A \cup B$): L_A | L_B
+
+Hiệu ($A - B$): L_A & (~L_B)
+Độ phức tạp thời gian: $O(1)$ chu kỳ máy.
+
+**5. CÁC ĐỊNH LÝ BẢO TOÀN (CONSERVATION THEOREMS)**
+
+Định lý 1: Tính Toàn vẹn Thông tin (Information Integrity)
+
+Một biến đổi $T$ trên $\mathbb{L}$ là khả nghịch nếu và chỉ nếu tích khoảng cách Hamming giữa trạng thái trước và sau biến đổi không vượt quá dung lượng vùng Guard Bits.
+
+$$H(\mathbb{L}, T(\mathbb{L})) < \sum G_i$$
+
+Định lý 2: Phân rã Nguyên tố Hình học (Geometric Prime Factorization)
+
+Mọi số nguyên $\mathbb{L}$ đại diện cho một vật thể phức tạp đều có thể được phân tích thành:
+
+$$\mathbb{L} = \Psi(\mathbb{P}_1, \mathbb{P}_2, \dots, \mathbb{P}_k)$$
+
+Trong đó $\mathbb{P}_i$ là các số nguyên biểu diễn các khối đa diện cơ bản (Platonic solids) và $\Psi$ là hàm tổ hợp logic.
+
+**6. KIẾN TRÚC PHẦN CỨNG: LGC-ALU**
+
+Để thực thi lý thuyết này, chúng ta cần cấu trúc chip Morphological Processor Unit (MPU):
+
+Ultra-Wide Registers (UWR): Thanh ghi có độ rộng từ $8192$ bit trở lên để chứa toàn bộ thực thể $\mathbb{L}$.
+
+Barrel Shifter Matrix: Mảng dịch bit cho phép thực hiện Scaling và Translation trong một xung nhịp.
+
+Phase Adder Array: Bộ cộng song song chuyên dụng cho các phân đoạn $\phi$ trong PFE.
+
+Bitwise Topology Engine: Đơn vị xử lý Boolean tốc độ cao dựa trên mặt nạ bit.
+
+**7. KẾT LUẬN**
+
+LGC không chỉ là một lý thuyết toán học; nó là một phương thức tái định nghĩa cách máy tính "nhìn" và "hiểu" hình thái. Bằng cách chuyển đổi hình học từ miền liên tục sang miền số học rời rạc nhưng có cấu trúc cao, chúng ta mở ra kỷ nguyên của đồ họa thời gian thực không giới hạn đa giác và các hệ thống mô phỏng vật lý với độ trễ bằng không.
+
