@@ -12,6 +12,8 @@ Linear Information Geometric Alignment. Linearizes complex nonlinear geometric s
 + (Alpha 1.1) https://github.com/nahhididwin/LIGA/blob/main/files(experiment)/idea-1.1.txt
 
 + (Beta 1.11) https://github.com/nahhididwin/LIGA/blob/main/files(experiment)/idea-1.11.txt
+
++ (Release 2.0) https://github.com/nahhididwin/LIGA/blob/main/files(experiment)/idea-2.0.txt
  
 # Author :
 
