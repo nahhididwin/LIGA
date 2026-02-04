@@ -1,4 +1,4 @@
-# LIGA — LINEAR GEOMETRIC ALGEBRA
+# LIGA — Linearized Integer Geometry Architecture
 
 **Định chế số hóa hình thái nhất thể & kiến trúc tính toán logic hình học**
 
@@ -8,7 +8,7 @@ Github : https://github.com/nahhididwin/LIGA/
 
 ## Tóm tắt (Abstract)
 
-LIGA (Linear Geometric Algebra) là một khuôn toán học-kiến trúc nhằm biểu diễn, biến đổi và xử lý các đối tượng hình học rời rạc hữu hạn bằng một **số nguyên có cấu trúc** duy nhất ký hiệu (\mathbb{L}). Mỗi thực thể được phân mảnh thành các Polar Frame Encoding (PFE), trong đó mỗi PFE có các phân đoạn bit độc lập cho bán kính (\rho), pha/góc (\phi), trạng thái vật liệu (S) và vùng bảo vệ (Guard/ECC). Các phép biến đổi hình học hữu ích — dịch, xoay, tỉ lệ, phép toán tập (CSG), chiếu — được thực hiện bằng các thao tác số nguyên nguyên thủy (shift, add modulo trên phân đoạn, AND/OR/NOT, trích bit). Tài liệu này đưa ra các định nghĩa rõ ràng, các định lý có chứng minh, mô tả mô hình lỗi, cơ chế cách ly và sửa lỗi (Guard, RNS, ECC), kiến trúc phần cứng đề xuất (MPU — Morphological Processing Unit), và lộ trình thí nghiệm để chứng minh tính hiệu quả thực nghiệm.
+LIGA (Linearized Integer Geometry Architecture) là một khuôn toán học-kiến trúc nhằm biểu diễn, biến đổi và xử lý các đối tượng hình học rời rạc hữu hạn bằng một **số nguyên có cấu trúc** duy nhất ký hiệu (\mathbb{L}). Mỗi thực thể được phân mảnh thành các Polar Frame Encoding (PFE), trong đó mỗi PFE có các phân đoạn bit độc lập cho bán kính (\rho), pha/góc (\phi), trạng thái vật liệu (S) và vùng bảo vệ (Guard/ECC). Các phép biến đổi hình học hữu ích — dịch, xoay, tỉ lệ, phép toán tập (CSG), chiếu — được thực hiện bằng các thao tác số nguyên nguyên thủy (shift, add modulo trên phân đoạn, AND/OR/NOT, trích bit). Tài liệu này đưa ra các định nghĩa rõ ràng, các định lý có chứng minh, mô tả mô hình lỗi, cơ chế cách ly và sửa lỗi (Guard, RNS, ECC), kiến trúc phần cứng đề xuất (MPU — Morphological Processing Unit), và lộ trình thí nghiệm để chứng minh tính hiệu quả thực nghiệm.
 
 Mục tiêu: biến các bài toán **occupancy/Boolean/voxel-heavy** thành toán học bit-parallel có tính khả thi phần cứng, đồng thời minh định các điều kiện chính xác, giới hạn và chi phí.
 
