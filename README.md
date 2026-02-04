@@ -1,5 +1,6 @@
 # LIGA
-LINEAR GEOMETRIC ALGEBRA. Linearizes complex nonlinear geometric shapes/lines. Simplifies the "understanding" of multidimensional spaces and computation.
+LINEAR GEOMETRIC ALGEBRA. It is a mathematical-architectural framework designed to represent, transform, and process finite discrete geometric objects using a unique structured integer.
+
 
 # Access : 
 
