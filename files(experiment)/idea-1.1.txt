@@ -214,3 +214,60 @@ Nếu bạn cấu trúc $\mathbb{L}$ sao cho độ sâu ($z$) nằm ở một Fr
 
 Vật thể càng xa ($z$ lớn), toàn bộ chuỗi bit $\mathbb{L}$ sẽ được dịch chuyển (Shift) để co lại về mặt giá trị, mô phỏng hiệu ứng xa gần.
 
+
+**VI. BỔ SUNG: TOÁN TỬ BOOLEAN HÌNH THÁI (MORPHOLOGICAL BOOLEAN ALGEBRA)**
+
+Trong hình học truyền thống, phép Hợp ($\cup$), Giao ($\cap$), và Hiệu ($-$) giữa các khối đa diện là cực kỳ tốn kém (CSG - Constructive Solid Geometry). LGC có thể biến chúng thành phép toán Logic mức bit.
+
+1. Phép Hợp (Union - $\cup$):
+
+$$\mathbb{L}_{A \cup B} = \mathbb{L}_A \ | \ \mathbb{L}_B$$
+
+Điều kiện: Hai vật thể phải cùng hệ cơ số $B$ và cùng Gốc tọa độ $\text{Frame}_0$. Phép $OR$ bitwise sẽ gộp toàn bộ gene hình thái của cả hai vào một thực thể duy nhất.
+
+2. Phép Giao (Intersection - $\cap$):
+
+$$\mathbb{L}_{A \cap B} = \mathbb{L}_A \ \& \ \mathbb{L}_B$$
+
+Phần không gian mà cả hai cùng chiếm chỗ (có cùng bit 1) sẽ được giữ lại.
+
+3. Phép Hiệu (Difference - $-$):
+
+$$\mathbb{L}_{A - B} = \mathbb{L}_A \ \& \ (\sim \mathbb{L}_B)$$
+
+Phép toán này cho phép "đục lỗ" vật thể $A$ bằng vật thể $B$ chỉ trong một chu kỳ xung nhịp $O(1)$.
+
+**VII. BỔ SUNG: PHÉP CO GIÃN (SCALING) - TOÁN TỬ NHÂN HÌNH THÁI**
+
+Phép co giãn (Scale) là điểm yếu của các hệ thống số nguyên. Bạn cần định nghĩa Phép nhân Logarit để bảo toàn cấu trúc.
+
+Giả thuyết: Co giãn vật thể tỉ lệ $s$ tương đương với việc thay đổi mật độ bit trong mỗi Frame.
+
+$$\mathbb{L}_{scaled} = \sum_{i=1}^{m} (\text{Frame}_i \cdot s) \cdot B^i$$
+
+Cơ chế nội suy bit: Khi $s > 1$ (phóng to), hệ thống tự động chèn thêm "Neutral Bits" (Bit trung tính) vào giữa các bit dữ liệu hiện có dựa trên hàm Fractal Smoothing (đã nêu ở phần III).
+
+Phép Scale không làm thay đổi vị trí Gốc ($\text{Frame}_0$), giúp vật thể giãn nở từ tâm mà không bị trôi dạt tọa độ.
+
+**VIII. BỔ SUNG: BIẾN DẠNG PHI TUYẾN (NON-LINEAR DEFORMATION)**
+
+Làm sao để một thanh sắt ($LGC$) có thể bẻ cong mà không cần tính lại hàng triệu đỉnh?
+
+Giải pháp: Bit-Shuffling (Hoán vị bit có điều kiện)
+
+Thay vì thay đổi giá trị của Frame, chúng ta thay đổi "Trọng số" của hệ cơ số $B$ theo một hàm uốn cong $f(i)$.
+
+$$\mathbb{L}_{bent} = \sum_{i=0}^{m} \text{Frame}_i \cdot B^{f(i)}$$
+
+Trong đó $f(i)$ là một hàm toán học định nghĩa độ cong. Trên FPGA, đây là phép Dịch bit động (Dynamic Bit-shift). Toàn bộ vật thể sẽ bẻ cong theo một vector trường lực mà không làm mất đi tính toàn vẹn của các đoạn mã hóa "Gene".
+
+
+**IX. BỔ SUNG: ĐỊNH LÝ BẢO TOÀN HÌNH THÁI (CONSERVATION OF MORPHOLOGY)**
+
+Đây là "Chứng chỉ an toàn" để các kỹ sư tin dùng LGC.
+
+Định lý: Với mọi phép toán $Op \in \{+, -, \ll, \&, |\}$, thực thể $\mathbb{L}$ được bảo toàn tính khả nghịch nếu và chỉ nếu mật độ bit hữu dụng (Entropy) không vượt quá giới hạn của Guard Bits.
+
+Hệ quả: Bạn có thể nén một vật thể 3D phức tạp thành một số $\mathbb{L}$ ngắn hơn bằng cách giảm hệ cơ số $B$ (LOD - Level of Detail). Khi cần chi tiết cao, chỉ cần thực hiện phép dịch trái và bù đắp bằng hàm Fractal.
+
+
