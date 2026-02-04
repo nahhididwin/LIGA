@@ -1,0 +1,261 @@
+# LINEAR GEOMETRIC ALGEBRA (LGC)
+
+**Định Chế Số Hóa Hình Thái Nhất Thể & Kiến Trúc Tính Toán Logic Hình Học**
+
+---
+
+## Tóm tắt (Abstract)
+
+LGC (Linear Geometric Algebra) là một khung toán-học và kiến trúc phần cứng-logic để biểu diễn, biến đổi và xử lý đối tượng hình học hữu hạn bằng một **số nguyên có cấu trúc (hyper-structured integer)** duy nhất ký hiệu (\mathbb{L}). Mỗi thực thể được chia thành các khung (PFE — Polar Frame Encoding), mỗi khung chứa các phân đoạn bit tách bạch cho bán kính ((\rho)), pha/góc ((\phi)), thông tin trạng thái vật liệu ((S)) và vùng bảo vệ (Guard). Các phép biến đổi hình học cơ bản — dịch, xoay, tỉ lệ, boolean (CSG), chiếu — được thực hiện bằng các thao tác số nguyên nguyên thủy (shift, add, bitwise AND/OR/NOT, bit-extract). Chúng tôi trình bày các định nghĩa chính thức, các định lý chứng minh (các trường hợp đúng), mô tả lỗi và cơ chế sửa lỗi (RNS, parity/ECC), mặt bằng kiến trúc MPU (Morphological Processing Unit), và lộ trình thực nghiệm để chứng minh hiệu năng so sánh với pipeline đồ họa hiện đại.
+
+---
+
+## Mục lục
+
+1. Giới thiệu và động cơ
+2. Định nghĩa chính thức và ánh xạ (\mathcal{F})
+3. Cấu trúc PFE và layout bit
+4. Toán tử hình thái: dịch, xoay, tỉ lệ, CSG
+5. Định lý và chứng minh
+6. Hệ giảm sai số: RNS, Guard, Dithering
+7. Kiến trúc phần cứng: MPU
+8. Độ phức tạp tính toán và phân tích băng thông
+9. Giao diện rendering: Bit-to-Pixel và Neural Bit-Decoder
+10. Hạn chế, rủi ro và phạm vi ứng dụng
+11. Kế hoạch thử nghiệm và benchmark
+12. Kết luận và hướng phát triển
+    Appendix A: Thuật toán cơ bản (pseudo-code)
+    Appendix B: Ví dụ numeric
+
+---
+
+## 1. Giới thiệu và động cơ
+
+Các pipeline đồ họa hiện đại dựa trên biểu diễn liên tục (tọa độ thực, ma trận, phép tính dấu phẩy động) kết hợp rasterization hoặc ray-tracing. Mục tiêu của LGC là cung cấp một phương thức thay thế cho các bài toán rời rạc hóa hình thái, nơi bài toán chính yếu là xác định sự hiện diện (occupancy) và các phép toán tập (union/intersection/difference) trên không gian rời rạc. LGC không tuyên bố thay thế mọi biểu diễn đồ họa, mà nhắm tới các workload: CSG, mô phỏng voxel/sparse fields, collision, spatial indexing—những bài toán mà toán tử bit có ưu thế rõ rệt.
+
+---
+
+## 2. Định nghĩa chính thức và ánh xạ (\mathcal{F})
+
+**Không gian nguồn.** Gọi (\mathcal{M}\subset\mathbb{R}^n) là không gian metric (ví dụ (n=3)). Mỗi đối tượng hình học hữu hạn (\mathcal{S}\subset\mathcal{M}) có thể được rời rạc hoá trên một lưới xác định (grid) với độ phân giải (r). Lấy tập chỉ số lưới (I) (finite index set) có (|I|=m). Mỗi ô của lưới được ánh xạ vào một bit trong biểu diễn occupancy.
+
+**Định nghĩa 2.1 (Bản đồ ánh xạ).** Chọn tham số hệ thống: word-width phân đoạn (w) (số bit cho mỗi phân đoạn), số phân đoạn trên một frame (p), số frame tối đa trên một đối tượng (N), và độ rộng từ (word size toàn cục) (W = p\cdot w). Định nghĩa ánh xạ
+
+[ \mathcal{F}: \mathcal{S}\mapsto \mathbb{L}=\sum_{i=0}^{N-1} \mathrm{PFE}_i\cdot 2^{W,i}. ]
+
+Với (\mathrm{PFE}_i) là một số (W)-bit, được cấu trúc thành phân đoạn (từ MSB → LSB): Guard (G), State (S), Radius (\rho), Phase (\phi) (hoặc một biến thể phù hợp với chiều không gian). Khi cần lưu trữ occupancy grid: mỗi frame tương ứng một ô hoặc một nhóm ô tùy quy ước tileization (ví dụ octree node).
+
+**Định lý 2.1 (Tính injective đơn giản).** Nếu hai đối tượng (\mathcal{S}_1,\mathcal{S}_2) trên cùng lưới có biểu diễn occupancy khác nhau ở ít nhất một ô, thì (\mathcal{F}(\mathcal{S}_1)\neq\mathcal{F}(\mathcal{S}_2)).
+**Chứng minh.** Vì mỗi ô ánh xạ tới một tập chỉ bit cố định trong các frame, bất kỳ khác biệt nào trong occupancy sẽ gây khác biệt ở ít nhất một bit của (\mathbb{L}). Vì vậy hai số khác nhau. □
+
+Lưu ý: ánh xạ (\mathcal{F}) là một ứng dụng phụ thuộc vào quy ước rời rạc hoá; tính injective chỉ đảm bảo trên cùng lưới và cùng quy ước packing.
+
+---
+
+## 3. Cấu trúc PFE và layout bit — nguyên tắc triển khai
+
+Chúng tôi đề xuất một layout an toàn khỏi carry giữa phân đoạn:
+
+* Mỗi (\mathrm{PFE}_i) có độ dài (W) với phân đoạn cố định: (G:,g) bit, (S:,s) bit, (\rho:,r) bit, (\phi:,\varphi) bit, với (g+s+r+\varphi=W).
+* **Quy tắc Guard:** chèn thêm (g) bit đệm giữa (\phi) và (\rho) (và giữa các phân đoạn) để ngăn carry khi cộng theo từng phân đoạn. Cụ thể, các phép cộng cục bộ (chẳng hạn cộng vào phần (\phi)) được thực hiện modulo (2^{\varphi}) và được tách bằng guard để đảm bảo không ảnh hưởng tới (\rho) do carry.
+
+Ví dụ tham số điển hình: (W=256), (\varphi=16) bits for angle, (r=64) bits for radius magnitude (fixed-point or log-coded), (s=8) bits cho state, (g=168) guard bits — (giá trị demo; thiết kế thực tế cần cân bằng độ chính xác với mật độ bit).
+
+---
+
+## 4. Toán tử hình thái: dịch, xoay, tỉ lệ, CSG
+
+### 4.1 Dịch (Translation)
+
+Giả sử mỗi frame biểu diễn vị trí tương đối so với frame cha (hierarchical encoding). Dịch toàn cục tương đương cập nhật frame gốc: một phép shift theo offset ô lưới. Kỹ thuật: nạp/giải nén khối liên quan và thực hiện bitwise shift trên vùng chỉ số occupancy. Đây là O((\lceil m/W\rceil)) nếu phải thao tác nhiều từ; nhưng trên UWR đủ lớn thao tác có thể được thực hiện trong một chu trình.
+
+### 4.2 Xoay (Rotation) — điều kiện cho phép cộng Mask
+
+**Định nghĩa 4.1 (Rotation Mask).** Gọi (\Delta\theta) là lượng xoay mong muốn, được rời rạc hóa vào bước góc (\delta=2\pi/2^{\varphi}). Nếu mỗi (\phi) nằm trong một phân đoạn (\varphi)-bit riêng biệt, ta định nghĩa mặt nạ xoay
+
+[ M_{\Delta\theta} = \sum_{i=0}^{N-1} (\mathrm{enc}(\Delta\theta);\mathrm{mod};2^{\varphi})\cdot 2^{W,i+o_{\phi}},]
+
+với (o_{\phi}) là offset của phân đoạn (\phi) bên trong (\mathrm{PFE}_i), và (\mathrm{enc}(\Delta\theta)) là giá trị nguyên tương ứng. Nếu phép cộng được thực hiện tại phân đoạn (\phi) với arithmetic modulo (2^{\varphi}) và **không có carry** sang các phân đoạn kế cận (được bảo đảm bởi guard bits), thì
+
+[ \mathbb{L}*{rotated} \equiv (\mathbb{L} + M*{\Delta\theta}) ;\bmod; 2^{W,N}. ]
+
+**Định lý 4.1 (Tính đúng đắn của Rotation bằng Addition).** Dưới điều kiện guard đủ lớn để ngăn carry từ phân đoạn (\phi) sang (\rho) trong mọi phép cộng, và encoding góc là modulo (2^{\varphi}), phép cộng mặt nạ như trên tương đương với phép xoay rời rạc theo bước (\delta) trên mọi frame độc lập.
+
+**Chứng minh.** Vì phân đoạn (\phi) nằm trong vùng bit xác định của mỗi frame và guard ngăn carry, cộng mặt nạ chỉ ảnh hưởng đến (\phi) theo modulo (2^{\varphi}). Do đó mỗi frame độc lập có pha được cộng đúng (\Delta\theta). Vì vị trí thực tế trong không gian được tính từ ((\rho,\phi)) trong hệ log-polar nội tại, việc cập nhật (\phi) là tương đương với xoay cục bộ frame. □
+
+**Lưu ý thực tế:** Khi muốn xoay quanh tâm hệ thống (global center) ta áp dụng cơ chế Cascading Frames (section 4.4) để dịch pha một lần ở cấp cha và tính lại vị trí tương đối của con bằng phép cộng log-polar (thêm vào (\phi) và (\ln \rho) nếu cần). Việc này giữ được tính hiệu quả nếu cascading depth nhỏ hoặc nếu dùng broadcast global phase offset.
+
+### 4.3 Tỉ lệ (Scaling)
+
+Trên mã hóa log-polar, scaling isotropic trở thành phép cộng trên (\ln \rho). Nếu chúng ta lưu (\tilde\rho=\lfloor \alpha\ln\rho\rfloor) với tỉ lệ (\alpha) thích hợp thì
+
+[ \ln( s\cdot\rho ) = \ln s + \ln\rho \Rightarrow \tilde\rho' = \tilde\rho + \mathrm{enc}(\ln s). ]
+
+Do đó scaling cũng là thao tác cộng cục bộ trên phân đoạn (\rho) (với guard đảm bảo không carry tới các phân đoạn khác).
+
+### 4.4 Cascading frames — quay quanh tâm hệ thống
+
+Mỗi đối tượng lưu thành cấu trúc cây: frame cha chứa vị trí và pha tham chiếu; frame con lưu vị trí tương đối. Khi quay quanh tâm hệ thống, ta chỉ cập nhật pha của frame gốc, và frame con được biểu diễn tương đối — do đó toàn cây cập nhật bằng cơ chế Phase Adder Array bằng một phép broadcast + cộng trên phân đoạn pha của mỗi frame.
+
+### 4.5 CSG bằng toán tử bit
+
+**Định lý 4.2 (Bitwise CSG).** Giả sử mỗi (\mathbb{L}_A,\mathbb{L}_B) là biểu diễn occupancy trên cùng hệ grid/packing. Khi đó:
+
+* (A\cap B) ↔ bitwise AND: (\mathbb{L}_{A\cap B}=\mathbb{L}_A & \mathbb{L}_B).
+* (A\cup B) ↔ bitwise OR: (\mathbb{L}_{A\cup B}=\mathbb{L}_A | \mathbb{L}_B).
+* (A\setminus B) ↔ (\mathbb{L}_A & \sim\mathbb{L}_B).
+
+**Chứng minh.** Vì occupancy tương ứng với các bit set, toán tử logic trên bit trực tiếp tương đương thao tác tập. □
+
+Độ phức tạp: nếu biểu diễn vừa khít trong một UWR thì các phép toán này có thể thực hiện trong **một chu kỳ phần cứng** (constant latency) ở mức register width; nếu phải thao tác trên nhiều từ thì phức tạp tuyến tính theo số từ.
+
+---
+
+## 5. Định lý và chứng minh (chi tiết hơn)
+
+### 5.1 Định lý Toàn vẹn Thông tin (Information Integrity) — phiên bản chính xác
+
+**Mô hình lỗi.** Giả sử phép biến đổi (T) là một chuỗi các phép toán bitwise, add mod trong từng phân đoạn, shift... Sai số có thể xuất hiện do: (i) rounding (khi thao tác log/exp rời rạc), (ii) carry làm tràn sang phân đoạn khác do thiết kế guard không đủ, (iii) lỗi phần cứng gây flip bit.
+
+**Thiết kế ECC/Guard.** Giả sử chúng ta dành trong mỗi (\mathrm{PFE}*i) một trường guard gồm một chuỗi bit ECC có khoảng cách Hamming tối thiểu (d*{min}). Hệ thống có thể sửa lỗi tối đa (t=\lfloor (d_{min}-1)/2\rfloor) bit flip trong phạm vi được bảo vệ.
+
+**Định lý 5.1 (Sufficient condition for reversibility).** Nếu trong mọi biến đổi (T) áp dụng lên (\mathbb{L}), tổng số bit bị thay đổi ngoài mục đích (uncontrolled flips) không vượt quá (t) cho mỗi khối ECC tương ứng được phân vùng hợp lý, và nếu mọi phép cộng cục bộ được giới hạn để không gây carry tràn qua guard (thiết kế đảm bảo), thì (T) là khả nghịch (reversible) khi và chỉ khi ta có đủ thông tin chỉnh sửa từ ECC để phục hồi trạng thái ban đầu.
+
+**Chứng minh.** Theo lý thuyết mã lỗi, ECC với khoảng cách (d_{min}) có thể phát hiện và sửa tối đa (t) lỗi. Nếu các lỗi vượt quá khả năng sửa, biến đổi có thể khiến mất thông tin. Điều kiện không carry đảm bảo các phép cộng cục bộ không phá hủy các phân đoạn khác không chịu tác động. Vì vậy điều kiện là đủ. □
+
+**Bình luận thực tế:** Đây là điều kiện **đủ** chứ không phải cần thiết tổng quát. Việc xây dựng ECC thích hợp và phân vùng guard hợp lý là phần thiết kế cần tối ưu giữa overhead bit và khả năng sửa lỗi.
+
+### 5.2 Phân rã nguyên tố hình học — dạng có thể chứng minh
+
+Tuyên bố tổng quát trong bản gốc là quá rộng để chứng minh (vì tính chất "nguyên tố" và "hàm tổ hợp" cần định nghĩa rõ). Chúng tôi đưa ra phiên bản có thể chứng minh:
+
+**Định lý 5.2 (Decomposition into primitives on orthogonal bit partitions).** Nếu biểu diễn (\mathbb{L}) được tổ chức sao cho mỗi "primitive" (ví dụ một khối đa diện cơ bản đã rời rạc hoá) chiếm một tập chỉ bit disjoint (không giao nhau) — tức là chúng ta mã hoá kiểu "tagged partition" — thì bất kỳ (\mathbb{L}) nào đều có phân rã duy nhất thành tổng logic các primitives (bằng OR các phần tương ứng). Việc phân rã này là đơn nhất trong mô hình partition.
+
+**Chứng minh.** Khi các phần là disjoint theo miền bit, phép OR trên các phần là phép hợp tập disjoint; phân rã là duy nhất do phân hoạch bit. □
+
+**Bình luận:** Mô hình này hơi hẹp (yêu cầu partitioning) nhưng mang tính thực dụng: nếu hệ lưu giữ danh sách primitives và chỉ nạp primitives khi cần, ta có biểu diễn hiệu quả. Tính duy nhất trong không gian tổng quát (không disjoint) không được đảm bảo.
+
+---
+
+## 6. Hệ giảm sai số: RNS, Parity Guards, Dithering
+
+### 6.1 Residue Number System (RNS)
+
+Định nghĩa: Chia trường giá trị của phân đoạn thành các modulus (m_1,\dots,m_k) pairwise-coprime. Lưu biểu diễn của giá trị (ví dụ (\rho) hoặc (\phi)) theo hệ rest residues. RNS cho phép phép cộng/trừ không carry giữa các modulus, và khả năng phát hiện tràn/gây lỗi khi chuyển sang miền chuẩn.
+
+**Lợi ích:** tăng khả năng xử lý song song cho arithmetic large-range, giảm carry chain trong các toán cộng lớn.
+
+### 6.2 Parity & ECC guards
+
+Các guard vùng chứa parity hoặc bits ECC (ví dụ BCH/LDPC) để phát hiện/sửa lỗi bitflip. Mỗi phân đoạn có guard riêng giúp cô lập lỗi.
+
+### 6.3 Stochastic Dithering & Bit-shuffling
+
+Đối với aliasing do rời rạc hoá góc hoặc radius, MPUs có thể thực hiện các thao tác nội bộ với độ phân giải cao hơn (oversampling in bit-domain), thu thập dư lỗi vào guard và áp dụng bit-shuffling để phân phối sai số theo dạng noise trắng, giảm pattern aliasing.
+
+---
+
+## 7. Kiến trúc phần cứng: MPU (Morphological Processing Unit)
+
+### 7.1 Thành phần chính
+
+* **Ultra-Wide Register (UWR):** thanh ghi từ 4096–65536 bits (tùy use-case) chia chunk để routing hiệu quả.
+* **Barrel Shifter Matrix:** thực hiện shift lớn (dùng cho translation) trong một chu kỳ cho mỗi chunk; pipeline cho multi-chunk.
+* **Phase Adder Array:** mảng bộ cộng song song cho phân đoạn (\phi)/(\rho); thiết kế để hỗ trợ modulo addition trong phân đoạn.
+* **Bitwise Topology Engine:** thực hiện AND/OR/NOT trên UWR hoặc multi-chunk data.
+* **Compression/Decompression Unit:** streaming hardware cho dictionary-based null-subtree pruning.
+* **RNS/ECC Engine:** chuyển đổi, kiểm tra parity, sửa lỗi cơ bản.
+
+### 7.2 Giao thức bộ nhớ & streaming
+
+Do kích thước lớn của UWR, kiến trúc cần hỗ trợ streaming để nạp/ghi dữ liệu (DMA-like). Cách tối ưu: lưu trữ biểu diễn nén (sparse) trong DRAM/SSD và giải nén trực tiếp vào UWR khi thực hiện op, hạn chế I/O bằng scheduling.
+
+### 7.3 Lập trình và ISA
+
+Đề xuất tập lệnh cao cấp: ROTATE_MASK_ADD, BLOCK_SHIFT, BITWISE_AND, BROADCAST_PHASE, RNS_ADD, ECC_CHECK, DECOMPRESS_STREAM.
+
+---
+
+## 8. Độ phức tạp tính toán & phân tích hiệu năng
+
+**Trong trường hợp lý tưởng** (tất cả dữ liệu vừa trong một UWR): các phép AND/OR/NOT/Mask-Add trên toàn bộ đối tượng là latency hằng số (một số chu kỳ) — tức O(1) theo số token logic. Tuy nhiên, chi phí thực tế bao gồm thời gian nạp/giải nén từ bộ nhớ, số chunk phải thao tác, và băng thông I/O. Vì vậy thời gian tổng thể:
+
+[ T_{total}=T_{io}(m)+T_{compute}(\lceil m/W\rceil) + T_{post}, ]
+
+với (m) là số bit đang xử lý (khối lượng dữ liệu), (W) kích thước UWR, (T_{io}) thời gian nạp, (T_{compute}) độ trễ thực thi per-chunk.
+
+**So sánh với GPU:** cho các workload boolean/voxel heavy, LGC-MPU có thể giảm số vòng lặp dữ liệu và tận dụng bit-parallelism tốt hơn GPU. Tuy nhiên, cho shading floating-point intensive hoặc mesh heavy workloads, GPU vẫn có lợi.
+
+---
+
+## 9. Giao diện rendering: Bit-to-Pixel & Neural Bit-Decoder (NBD)
+
+### 9.1 Bit-to-Pixel: cơ chế quét trực tiếp
+
+MPU quét thanh ghi occupancy theo order (Hilbert/Morton) và kích hoạt subpixel tương ứng. Với tính năng direct-drive (nếu panel hỗ trợ streaming subpixel) có thể giảm độ trễ rasterization. Thực tế: phần lớn màn hình hiện tại không hỗ trợ direct per-voxel drive; do đó thường cần chuyển sang intermediate framebuffer (tile-based).
+
+### 9.2 Neural Bit-Decoder (NBD)
+
+Đóng vai trò dịch biểu diễn bitfield → image (RGB) hoặc tile framebuffer. Các cỡ mạng khuyến nghị: encoder-free lightweight CNN/Transformer nhận đầu vào bit patches (sparse tensors) và dự báo subpixel intensities. Việc này cho phép khai thác thông tin cấu trúc bit (density, gradients) để phục hồi bề mặt trơn.
+
+**Đề xuất metric:** sử dụng SSIM, LPIPS, latency (ms) và throughput (frames/s) làm thước đo so sánh với rasterization baseline.
+
+---
+
+## 10. Hạn chế, rủi ro và phạm vi ứng dụng
+
+**Hạn chế cơ bản:**
+
+* Chi phí bộ nhớ tăng theo độ phân giải (curse of dimensionality).
+* Phụ thuộc vào khả năng nén và sparsity của scene; scenes dense làm tăng overhead.
+* Phép biến đổi liên tục chính xác (ví dụ perspective-correct interpolation) cần carefully designed quantization.
+
+**Rủi ro:** tuyên bố "thay thế ma trận và floating-point mọi lúc" là không chính xác. LGC bổ sung một hệ công cụ rời rạc có lợi trong nhiều workload nhưng không phải panacea.
+
+**Phạm vi tốt nhất áp dụng:** CSG/CAD, voxel-based rendering, collision detection, spatial indexing, server-side batch processing of boolean operations, hardware accelerators cho procedural worlds.
+
+---
+
+## 11. Kế hoạch thử nghiệm và benchmark (thực thi để chứng minh đột phá)
+
+**Giai đoạn 0 — Prototype phần mềm (3–6 tuần):**
+
+* Implement bitset-backed (\mathbb{L}) trên C++ (128/256/1024-bit chunks).
+* Thực hiện packing/unpacking PFE, rotation-mask add, CSG primitives.
+* Test datasets: voxelized models (Stanford bunny voxelized ở nhiều resolution), boolean-heavy scenes.
+* Metrics: latency op, memory, Hamming distance vs ground-truth voxelization.
+
+**Giai đoạn 1 — Validation lỗi & RNS (4–8 tuần):**
+
+* Thử nghiệm carry/guard; kiểm chứng các điều kiện của Định lý 4.1.
+* Triển khai RNS/ECC modules, đo khả năng sửa lỗi.
+
+**Giai đoạn 2 — FPGA prototype (12–24 tuần):**
+
+* Implement UWR chunking, Barrel Shifter Matrix, Phase Adder Array trên FPGA.
+* Đo throughput, latency, năng lượng; benchmark với GPU cho workloads boolean/voxel.
+
+**Giai đoạn 3 — NBD & rendering pipeline (8–12 tuần):**
+
+* Train NBD từ bit patches → tile images; so sánh chất lượng với rasterization.
+* Tối ưu hóa end-to-end latency.
+
+---
+
+## 12. Kết luận và hướng phát triển
+
+LGC là một framework rành mạch để nghiên cứu sự kiện rằng nhiều phép toán hình học rời rạc có thể biểu diễn bằng toán tử bit và được gia tốc phần cứng. Chúng tôi đã cung cấp các định nghĩa chính thức, chứng minh cho các mệnh đề có thể chứng minh (CSG, điều kiện rotation bằng addition, điều kiện reversibility với ECC), và một lộ trình thực nghiệm để kiểm chứng các tuyên bố hiệu năng. Độ đột phá thực tế phụ thuộc vào chứng minh thực nghiệm (prototype FPGA/software) và thiết kế trade-off giữa độ chính xác và overhead bộ nhớ.
+
+---
+
+### Appendix A — Thuật toán cơ bản (pseudo-code)
+
+(Phần này chứa pseudo-code: packPFE, applyRotationMask, csgAND, decompressStream — bị lược trong bản tổng quan; nếu bạn muốn mình sẽ đưa mã chi tiết C++/Python.)
+
+### Appendix B — Ví dụ numeric
+
+(Phần ví dụ chi tiết với vector bit và minh họa carry/guard; được cung cấp theo yêu cầu.)
+
+---
+
+*Ghi chú:* Trong tài liệu này, những tuyên bố tổng quát mà bản gốc đưa ra đã được làm rõ thành các mệnh đề kèm điều kiện. Bất kỳ tuyên bố "toàn cầu" nào (ví dụ thay thế universal matrix/FP cho mọi bài toán) được coi là **không hợp lý** nếu không có dữ liệu thực nghiệm. Tài liệu cung cấp nền toán học có thể chứng minh cho các trường hợp giới hạn thực tế và lộ trình để mở rộng và kiểm chứng thêm.
