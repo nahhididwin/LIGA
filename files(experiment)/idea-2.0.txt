@@ -108,3 +108,65 @@ Bitwise Topology Engine: Đơn vị xử lý Boolean tốc độ cao dựa trên
 
 LGC không chỉ là một lý thuyết toán học; nó là một phương thức tái định nghĩa cách máy tính "nhìn" và "hiểu" hình thái. Bằng cách chuyển đổi hình học từ miền liên tục sang miền số học rời rạc nhưng có cấu trúc cao, chúng ta mở ra kỷ nguyên của đồ họa thời gian thực không giới hạn đa giác và các hệ thống mô phỏng vật lý với độ trễ bằng không...
 
+
+# Bổ sung (1) :
+
+**1. GIẢI QUYẾT VẤN ĐỀ XOAY (THE ROTATION PARADOX)**
+
+Vấn đề: Cộng Mask chỉ xoay vật thể quanh tâm nội tại, không xoay được cụm vật thể quanh tâm chung. Giải pháp : Phân cấp Log-Polar (Recursive Log-Polar Encoding).
+
+Thay vì một số nguyên phẳng, $\mathbb{L}$ được cấu trúc theo hệ thống Cascading Frames. Mỗi thực thể $\mathbb{L}_{child}$ được định nghĩa bởi một vị trí tương đối so với $\mathbb{L}_{parent}$ dưới dạng $(\ln \rho, \phi)$.
+
+New: Trong miền Log-Polar, phép xoay là phép cộng ($\phi + \Delta \phi$) và phép co giãn là phép cộng ($\ln \rho + \ln s$).
+
+Cơ chế Cascading: Khi xoay tâm hệ thống, một tín hiệu Global Phase Offset được gửi qua bus dữ liệu của MPU. Thay vì tính toán lại từng đỉnh, bộ lọc Phase Adder Array sẽ cộng dồn sai số pha vào mọi Frame trong một chu kỳ xung nhịp.
+
+Kết quả: Xoay toàn bộ thiên hà hoặc xoay một nguyên tử đều tốn $O(1)$ vì đó là phép cộng hằng số trên toàn bộ thanh ghi siêu rộng (UWR).
+
+**2. TRIỆT TIÊU SAI SỐ TÍCH LŨY (ANTI-ALIASING & ERROR CORRECTION)**
+
+Vấn đề: Răng cưa và sai số số nguyên khi biến đổi nhiều lần. Giải pháp: Hệ thặng dư số (Residue Number System - RNS) & Parity Guards.
+
+Tích hợp cơ chế tự sửa lỗi giống như trong bộ nhớ ECC hoặc viễn thông:
+
+Unit-Guard-Interval (UGI): Giữa các phân đoạn $\rho$ và $\phi$ là các bit "bù sai số" (Error-carry bits). Khi một phép xoay gây ra sai số làm tròn, giá trị dư sẽ được đẩy vào vùng Guard thay vì bị cắt bỏ.
+
+Stochastic Dithering in Bit-domain: MPU sẽ thực hiện các phép toán với độ phân giải cao hơn 2-bit so với dữ liệu thực tế, sau đó dùng thuật toán "Bit-shuffling" để triệt tiêu hiện tượng răng cưa ngay từ tầng số học, trước khi xuất ra hình ảnh.
+
+**3. TỐI ƯU HÓA CSG $O(1)$ (ADDRESSABLE TOPOLOGY)**
+
+Vấn đề: Căn chỉnh (Alignment) hai vật thể tốn thời gian. Giải pháp: Universal Spatial Hashing (USH).
+
+Mọi số nguyên $\mathbb{L}$ trong không gian LGC không nằm tự do. Chúng được gán vào một Global Bit-Grid dựa trên thuật toán đường cong Hilbert 4D.
+
+Khi hai vật thể $A$ và $B$ tương tác, địa chỉ bit của chúng trong thanh ghi UWR đã được "căn chỉnh ngầm" (Implicit Alignment) bởi hệ tọa độ tuyệt đối của MPU.
+
+Phép toán $A \cap B$ thực sự trở thành AND logic trên thanh ghi vì hai bit tương ứng của $A$ và $B$ đại diện cho cùng một điểm trong không gian thực.
+
+**4. XỬ LÝ ÁNH SÁNG & ĐỔ BÓNG (BIT-DERIVATIVE SHADING)**
+
+Vấn đề: Không có pháp tuyến (Normal) để tính ánh sáng. Giải pháp: Discrete Bit-Gradient (Phép vi phân bit).
+
+Trong LGC, mật độ bit của $\mathbb{L}$ đại diện cho sự tồn tại của vật chất.
+
+Normals: Pháp tuyến tại một điểm được tính bằng cách so sánh bit hiện tại với các bit lân cận trong thanh ghi (một phép XOR và Shift).
+
+$$\vec{N} \approx \text{BitDiff}(\mathbb{L}, i)$$
+
+Ray-Interaction: Ánh sáng được coi là một chuỗi bit $\mathbb{L}_{light}$. Hiện tượng phản xạ và khúc xạ được tính bằng phép toán logic giữa bit-luồng sáng và bit-vật thể, loại bỏ hoàn toàn việc tính hàm dot(N, L) bằng số thực.
+
+**5. HÀM ÁNH XẠ NGƯỢC (BIT-TO-PIXEL RENDERING)**
+
+Vấn đề: Hiển thị lên màn hình hiện tại. Giải pháp: Neural Bit-Decoder (NBD).
+
+Chúng ta không chuyển $\mathbb{L}$ về tam giác (Polygon). Đó là bước lùi.
+
+LGC sử dụng kiến trúc Direct Bit-Streaming. Chip MPU sẽ quét qua thanh ghi $\mathbb{L}$ và dựa trên giá trị $(\rho, \phi)$ để kích hoạt trực tiếp các sub-pixel trên màn hình.
+
+Nó hoạt động giống như cách quét tia điện tử trong màn hình CRT cũ nhưng ở tốc độ kỹ thuật số siêu cao. Chúng ta bỏ qua bước rasterization truyền thống.
+
+**6. NÉN DỮ LIỆU (SPARSE HYPER-INTEGERS)**
+
+Vấn đề: 8192-bit quá tốn dung lượng. Giải pháp: Null-Subtree Pruning.
+
+Mặc dù thanh ghi là 8192-bit, nhưng trong bộ nhớ lưu trữ, LGC sử dụng Dictionary-based Bit-compression. Các vùng không gian trống (bit 0) được mã hóa bằng các cặp (Length, Offset). Chỉ khi dữ liệu được nạp vào MPU để xử lý, nó mới "bung" ra đầy đủ 8192-bit để tận dụng sức mạnh tính toán song song.
