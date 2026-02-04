@@ -1,5 +1,5 @@
 # LIGA
-LINEAR GEOMETRIC ALGEBRA. It is a mathematical-architectural framework designed to represent, transform, and process finite discrete geometric objects using a unique structured integer.
+Linearized Integer Geometry Architecture. It is a mathematical-architectural framework designed to represent, transform, and process finite discrete geometric objects using a unique structured integer.
 
 
 # Access : 
