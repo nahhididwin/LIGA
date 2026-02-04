@@ -265,6 +265,21 @@ NBD nhận các bit-patch (ví dụ 32×32 bits) và dự đoán tile RGB/alpha.
 * Train NBD từ bit patches→tile images; so sánh chất lượng với rasterization.
 * End-to-end latency đo từ LIGA representation → framebuffer.
 
+
+
+**Một ví dụ cho việc LIGA giải bài toán n-chiều (nD) :**
+
+Mô tả vấn đề nD : Giả sử ta có một tập S gồm N “tile frames”, mỗi tile là một ô occupancy trong một lưới rời rạc kích thước 2^d theo mỗi chiều (tức tổng cells = 2^(d.n) — biểu diễn cực lớn khi n tăng). Ta muốn thực hiện một phép quay rời rạc cùng góc Δθ lên tất cả tile frames (hoặc tất cả nodes của một octree/quadtree ở mọi vị trí) đồng thời — tức thay đổi trường pha 𝜑 của mỗi frame bằng cùng một offset.
+
+Với cấu trúc PFE của LIGA, nếu bạn đóng gói N frames liên tiếp (mỗi frame có phân đoạn pha 𝜑 nằm ở offset cố định trong PFE) thì một phép cộng nguyên duy nhất:
+
+$$\mathbb{L}' = (\mathbb{L} + M(v)) \bmod 2^{NW}$$
+
+với M(v) là mask-add đã định nghĩa (đặt giá trị v vào vị trí phân đoạn pha của mỗi frame), sẽ xoay tất cả N frame cùng lúc — tức thực hiện N phép xoay độc lập chỉ bằng một addition (một chuỗi bitwise add) nếu layout guard-safe.
+
+
+
+
 ---
 
 ## 12. Kết luận và hướng phát triển
