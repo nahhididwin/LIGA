@@ -4,7 +4,7 @@
 
 **1. TÓM TẮT (ABSTRACT)**
 
-LGC đề xuất một phương pháp luận đột phá: Loại bỏ hoàn toàn ma trận chuyển đổi (Transformation Matrices) và dấu phẩy động (Floating Point) trong đồ họa máy tính. Thay vào đó, chúng tôi biểu diễn mọi thực thể hình học $n$-chiều dưới dạng một Số nguyên siêu cấu trúc (Hyper-structured Integer) duy nhất $\mathbb{L}$. Thông qua việc mã hóa khung cực (Polar Frame Encoding - PFE), các biến đổi hình học phức tạp được rút gọn thành các phép tính số học cơ bản (Addition, Bit-shifting, Masking) trên ALU, hứa hẹn tăng hiệu suất xử lý lên gấp nhiều lần so với kiến trúc GPU hiện tại.
+LGC đề xuất một phương pháp luận đột phá: Loại bỏ hoàn toàn ma trận chuyển đổi (Transformation Matrices) và dấu phẩy động (Floating Point) trong đồ họa máy tính. Thay vào đó, chúng tôi biểu diễn mọi thực thể hình học $n$-chiều dưới dạng một Số nguyên siêu cấu trúc (Hyper-structured Integer) duy nhất $\mathbb{L}$. Thông qua việc mã hóa khung cực (Polar Frame Encoding - PFE), các biến đổi hình học phức tạp được rút gọn thành các phép tính số học cơ bản (Addition, Bit-shifting, Masking) trên ALU, hứa hẹn tăng hiệu suất xử lý lên gấp nhiều lần so với kiến trúc GPU hiện tại. Đồng thời kèm theo nhiều hệ quả có lợi cho các tính toán trong chiều không gian n-chiều, vật lý lượng tử (Quantum Mechanics), Mô phỏng Động lực học Phân tử, Lý thuyết Dây,...
 
 **2. HỆ TIÊN ĐỀ VÀ CƠ SỞ TOÁN HỌC**
 
