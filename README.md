@@ -14,7 +14,10 @@ Linear Information Geometric Alignment. Linearizes complex nonlinear geometric s
 + (Beta 1.11) https://github.com/nahhididwin/LIGA/blob/main/files(experiment)/idea-1.11.txt
 
 + (Beta 2.0) https://github.com/nahhididwin/LIGA/blob/main/files(experiment)/idea-2.0.txt
- 
+
++ (Beta 3.0) https://github.com/nahhididwin/LIGA/blob/main/files(experiment)/idea-3.1.txt
+
+
 # Author :
 
 Full name : Dang Dinh Phu Hung (Đặng Đình Phú Hưng)
