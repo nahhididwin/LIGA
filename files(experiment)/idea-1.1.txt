@@ -322,3 +322,69 @@ Nếu $GCD$ lớn: Hai máy móc này có chung "cơ chế xương".
 
 Nếu $\mathbb{L}_1 \equiv \mathbb{L}_2 \pmod{B^k}$: Hai vật thể này giống hệt nhau ở các chi tiết vi mô (độ phân giải thấp).
 
+
+# Bổ sung toàn cuối :
+
+**1. TÁI CẤU TRÚC "GENE" HÌNH THÁI: PHƯƠNG PHÁP PFE (POLAR FRAME ENCODING)**
+
+Vấn đề của bạn nằm ở chỗ: Bạn đang cố gắng xoay một vật thể được mã hóa theo vị trí tuyệt đối. Để xoay trở thành phép cộng, chúng ta phải mã hóa vật thể theo Trường Vector Nội tại.
+
+Mỗi Frame_i trong $\mathbb{L}$ sẽ không lưu $(x, y)$, mà lưu bộ dữ liệu $(\rho, \phi)$:
+
+$\rho$ (Radius): Khoảng cách từ gốc tọa độ (Anchor) đến điểm/vector đó.
+
+$\phi$ (Phase/Angle): Góc xoay so với trục chuẩn.
+
+Cấu trúc một Frame (ví dụ 64-bit): [Guard Bits (12)] | [Radius bits (26)] | [Phase bits (26)]
+
+Công thức $\mathbb{L}$ mới:
+
+$$\mathbb{L} = \text{Frame}_{anchor} + \sum_{i=1}^{m} (\rho_i \cdot 2^{26} + \phi_i) \cdot B^i$$
+
+**2. LỜI GIẢI CHO PHÉP XOAY: MẶT NẠ PHA ĐỒNG BỘ (SYNCHRONOUS PHASE MASK)**
+
+Khi bạn muốn xoay toàn bộ vật thể một góc $\Delta \theta$, thay vì tính lại $\sin, \cos$ cho từng đỉnh, bạn tạo ra một Mặt nạ Xoay (Rotation Mask - $M_\theta$).
+
+Cấu trúc $M_\theta$:
+
+$$M_\theta = \sum_{i=1}^{m} (0 \cdot 2^{26} + \Delta \theta) \cdot B^i$$
+
+Phép toán xoay:
+
+$$\mathbb{L}_{rotated} = \mathbb{L} + M_\theta$$
+
+**3. ÁNH XẠ SFC (SPACE-FILLING CURVE) TRÊN MIỀN LOG-POLAR**
+
+Để giải quyết thách thức về việc "hai điểm gần nhau trong không gian bị tách xa nhau trên $\mathbb{L}$", chúng ta không sử dụng Hilbert truyền thống trên lưới vuông. Chúng ta sử dụng Log-Polar Hilbert Curve.
+
+Cơ chế: Chia không gian thành các vòng tròn đồng tâm và các nan quạt (Sector).
+
+Ưu điểm: Đường cong SFC sẽ chạy tuần tự qua các Sector. Khi vật thể xoay, nó chỉ đơn giản là "trượt" trên các mắt lưới của đường cong này.
+
+Hàm $\mathcal{F}$: $\mathcal{F}$ lúc này đóng vai trò là một bộ chuyển đổi Log-Polar. Khoảng cách giữa các điểm được bảo toàn theo tỷ lệ góc, giúp hàm liên tục (Fractal Smoothing) hoạt động ổn định khi $\Delta \theta$ thay đổi nhỏ.
+
+**4. CHỨNG MINH TOÁN HỌC CHO TÍNH KHẢ NGHỊCH (REVERSIBILITY)**
+
+Giả sử phép xoay Euclidean là $R(\theta)$. Ta cần chứng minh:
+
+$$\mathcal{F}^{-1}(\mathbb{L} + M_\theta) \equiv R(\theta) \cdot \mathcal{S}$$
+
+Chứng minh:
+
+Với mỗi điểm $P_i \in \mathcal{S}$, tọa độ cực là $(r_i, \phi_i)$.
+
+Phép xoay Euclidean: $R(\theta)P_i = (r_i, \phi_i + \theta)$.
+
+Trong LGC:
+
+$\text{Frame}_i = \rho_i \cdot B_{shift} + \phi_i$.
+
+$\text{Frame}_i + \text{Mask}_i = \rho_i \cdot B_{shift} + (\phi_i + \theta)$.
+
+Khi giải mã $\mathcal{F}^{-1}$ bằng phép chia lấy dư:
+
+$\text{Angle}_{new} = (\mathbb{L} + M_\theta) \pmod{B_{shift}} = \phi_i + \theta$.
+
+$\text{Radius}_{new} = \lfloor \frac{\mathbb{L} + M_\theta}{B_{shift}} \rfloor = \rho_i$.
+
+Kết quả: Tọa độ sau giải mã khớp hoàn toàn với phép xoay Euclidean.
