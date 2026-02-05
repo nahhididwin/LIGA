@@ -25,6 +25,18 @@ $$\mathbb{L}' = (\mathbb{L} + M(v)) \bmod 2^{NW}$$
 với M(v) là mask-add đã định nghĩa (đặt giá trị v vào vị trí phân đoạn pha của mỗi frame), sẽ xoay tất cả N frame cùng lúc — tức thực hiện N phép xoay độc lập chỉ bằng một addition (một chuỗi bitwise add) nếu layout guard-safe.
 
 
+
+
+LIGA giúp mạnh khi bài toán nD thỏa 3 điều kiện sau:
+
+Không gian rời rạc (discrete grid / voxel / tile / occupancy)
+
+Biến đổi đồng loạt, giống nhau trên rất nhiều phần tử
+(rotation offset, phase shift, state toggle, morphology)
+
+Quan tâm topology > metric chính xác
+(đúng/sai, có/không, thuộc/không thuộc quan trọng hơn sai số FP nhỏ)
+
 Lưu ý : Lý thuyết này cho đến tận lúc được đăng lên vẫn chỉ đang được một học sinh sinh năm 2011 nghiên cứu/phát triển. Nó vẫn có thể có hạn chế, hy vọng sẽ được góp ý hoặc được cộng đồng giúp đỡ trong việc hoàn thiện.
 
 
@@ -327,7 +339,6 @@ function applyRotationMask(L, v):
 
 function csgAND(LA, LB):
   return LA & LB
-
 
 
 
