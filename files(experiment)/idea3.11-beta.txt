@@ -1,6 +1,6 @@
 # LIGA — Linearized Integer Geometry Architecture
 
-**Định chế số hóa hình thái nhất thể & kiến trúc tính toán logic hình học**
+**Kiến trúc hình học số nguyên tuyến tính**
 
 Github : https://github.com/nahhididwin/LIGA/
 
