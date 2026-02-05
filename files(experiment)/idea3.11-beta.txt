@@ -341,4 +341,3 @@ Cho W=32, phi=8, rho=8, s=4, g=12. Nếu ta cộng v=200 vào phi, giả sử ph
 
 ---
 
-*Ghi chú của tác giả:* Whitepaper này là bản viết lại có cấu trúc, làm rõ các giả thiết và chứng minh các mệnh đề chính. Một số tuyên bố tổng quát hơn (ví dụ "phân rã nguyên tố hình học" không phụ thuộc packing) cần thêm định nghĩa hình học rời rạc hoặc giả thiết bổ sung để có định lý đầy đủ; ở đây ta giới hạn mô tả vào các mệnh đề có thể chứng minh trong mô hình packing/bit.
