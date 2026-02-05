@@ -25,7 +25,7 @@ $$\mathbb{L}' = (\mathbb{L} + M(v)) \bmod 2^{NW}$$
 với M(v) là mask-add đã định nghĩa (đặt giá trị v vào vị trí phân đoạn pha của mỗi frame), sẽ xoay tất cả N frame cùng lúc — tức thực hiện N phép xoay độc lập chỉ bằng một addition (một chuỗi bitwise add) nếu layout guard-safe.
 
 
-Lưu ý : Lý thuyết này được một học sinh sinh năm 2011 nghiên cứu. Nó vẫn có thể có hạn chế, hy vọng sẽ được góp ý hoặc được cộng đồng giúp đỡ trong việc hoàn thiện.
+Lưu ý : Lý thuyết này được một học sinh sinh năm 2011 nghiên cứu/phát triển. Nó vẫn có thể có hạn chế, hy vọng sẽ được góp ý hoặc được cộng đồng giúp đỡ trong việc hoàn thiện.
 
 
 ---
