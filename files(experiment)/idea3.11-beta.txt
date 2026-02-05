@@ -45,7 +45,7 @@ Lưu ý : Lý thuyết này cho đến tận lúc được đăng lên vẫn ch�
 11. Kế hoạch thí nghiệm và benchmark chi tiết
 12. Kết luận và hướng phát triển
 
-Appendix A: Pseudocode cơ bản
+Appendix A: Pseudocode cơ bản, Và Test
 Appendix B: Ví dụ numeric minh hoạ carry/guard
 Appendix C: Thảo luận về trade-offs
 
