@@ -331,7 +331,7 @@ function csgAND(LA, LB):
 
 
 
-**Run the test:**
+**Run the test (https://github.com/nahhididwin/LIGA/blob/main/files(experiment)/more/liga_demo.py) :**
 
 liga_demo.py: 
 "
