@@ -1,6 +1,8 @@
 # LIGA
 Linearized Integer Geometry Architecture. It is a mathematical-architectural framework designed to represent, transform, and process finite discrete geometric objects using a unique structured integer.
 
+Lưu ý : Lý thuyết này cho đến tận lúc được đăng lên vẫn chỉ đang được một học sinh sinh năm 2011 nghiên cứu/phát triển. Nó vẫn có thể có hạn chế, hy vọng sẽ được góp ý hoặc được cộng đồng giúp đỡ trong việc hoàn thiện.
+
 
 # Access : 
 
