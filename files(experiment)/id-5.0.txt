@@ -1,0 +1,24 @@
+# LIGA — Linearized Integer Geometry Architecture
+
+Github : https://github.com/nahhididwin/LIGA/
+
+**Kiến trúc hình học số nguyên tuyến tính**
+
+
+# Tóm tắt (Abstract)
+
+LIGA (Linearized Integer Geometry Architecture) là một khuôn lý thuyết + kiến trúc nhằm mã hoá mọi thực thể hình học rời rạc hữu hạn (tile, voxel, octree node, v.v.) vào một số nguyên lớn duy nhất
+$$\mathbb{L}$$ theo quy ước PFE (Polar Frame Encoding). Bằng cách thiết kế layout bit với các phân đoạn độc lập (Guard, State, Radius, Phase), ta có thể diễn đạt các phép biến đổi hình thái (Boolean/CSG, translation, rotation rời rạc, scaling via log-encoding) dưới dạng các thao tác số nguyên nguyên thủy (shift, bitwise, add modulo theo phân đoạn) và đưa ra điều kiện cần-đủ để những phép toán đó tương đương chính xác với phép toán hình học mong muốn.
+
+Trong văn bản này tôi:
+
+1. Định nghĩa chính xác không gian, ánh xạ $$\mathcal{F}$$ và PFE (độ dài, offset các phân đoạn).
+
+2. Phát biểu và chứng minh các định lý: injectivity, tính đúng đắn CSG, điều kiện không-carry (guard-safe) và tính đúng đắn của rotation bằng mask-add, tính chất scaling qua mã hoá log, tính đảo ngược (reversibility) có điều kiện khi dùng ECC.
+
+3. Mô tả mô hình lỗi và các cơ chế giảm lỗi (guard, ECC, RNS, dithering) với chỉ dẫn rõ ràng để lựa chọn tham số sao cho các điều kiện chứng minh thỏa.
+
+4. Trình bày phương pháp xây dựng UWR (Ultra-Wide Register) và MPU (Morphological Processing Unit) một cách xây dựng: cách tổ chức thanh ghi rất rộng bằng các phần tử phần cứng hiện có (block RAM, LUT, DSP, multi-word buses), mảng cộng song song phân đoạn, barrel shifter matrix, và mapping thực tế lên FPGA như một prototype khả thi (các bước, thuật toán, ước lượng tài nguyên biểu thức).
+
+5. Đưa ra lộ trình thí nghiệm chi tiết kèm tập dữ liệu, kiểm định điều kiện lý thuyết, inject-fault tests, và phép so sánh đối chứng (GPU, vectorized CPU).
+
