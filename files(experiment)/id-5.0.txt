@@ -149,3 +149,61 @@ Lưu ý: điều này chỉ hữu dụng khi ứng dụng chấp nhận sai số
 
 
 
+Định nghĩa (ECC block). Mỗi PFE mang thêm một trường guard chứa mã sửa lỗi block-code (ví dụ BCH hoặc LDPC) có độ dài $g$ bit, mã có khoảng cách Hamming $d_{\min}$, sửa được $t = \lfloor (d_{\min} - 1)/2 \rfloor$ lỗi trong block đó.
+
+Định lý 7.1 (Reversibility có điều kiện). Cho một chuỗi phép toán $T$ từ $\mathbb{L}_0$ đến $\mathbb{L}_f$ gồm các thao tác bitwise, shift, add-modulo cục bộ thỏa guard-safe; nếu trong suốt chuỗi này, số bit lỗi không kiểm soát trong mỗi block $\le t$ tại mọi thời điểm trước khi đảo ngược, thì ta có thể phục hồi trạng thái ban đầu bằng cách: (i) dùng ECC để sửa lỗi ở mỗi bước hoặc (ii) sửa lỗi sau khi hoàn tất chuỗi, rồi áp dụng các phép toán nghịch đảo tuần tự.
+
+Chứng minh (ý chính). Các phép toán bitwise/shift/add (khi guard-safe) là ánh xạ toàn đồ (bijective) trên không gian giá trị hợp lệ (tức không có lỗi trong bit payload), hoặc ít nhất là injective nếu ta biết lịch sử thao tác. Nếu $\text{errors} \le t$ trong mỗi block, ECC sẽ khôi phục block về giá trị hợp lệ (nhãn trước biến đổi). Do đó sau khi sửa lỗi, ta có thể áp dụng phép nghịch đảo toán học (subtraction modulo, shift ngược, bitwise inverse) để phục hồi $\mathbb{L}_0$. $\square$
+
+Thực nghiệm: đảm bảo điều kiện "$\text{errors} \le t$ tại mọi thời điểm" là nhiệm vụ của cơ chế phát hiện/giới hạn lỗi — ví dụ bằng redundancy, parity checks thường xuyên, hoặc cơ chế rollback checkpoints.
+
+**8. RNS (Residue Number System) và tính tránh carry — lời giải toán học + thực hành**
+
+8.1 Lý thuyết RNS ngắn
+
+Chọn moduli $m_1, \dots, m_k$ pairwise coprime, tổng miền biểu diễn tới sản phẩm $M = \prod_{i} m_i$.
+
+Một số $X$ được biểu diễn qua residues $(x_1, \dots, x_k)$ với $x_i = X \pmod{m_i}$.
+
+Các phép cộng/trừ trong RNS thực hiện độc lập trên từng modulus — không có carry giữa residues $\to$ phù hợp cho add throughput cao.
+
+Ưu-nhược: RNS cho phép cộng nhanh, không carry, nhưng phép so sánh/scale/CRC cần chuyển đổi CRT (Chinese Remainder) hoặc các thuật toán so sánh RNS phức tạp.
+
+8.2 Ứng dụng trong LIGA
+
+Đối với trường radius hoặc các trường cần dynamic range lớn nhưng ít phép so sánh, lưu theo RNS bên trong PFE (chia thành nhiều sub-fields được hiểu là residues) giúp tránh carry chain khi cộng các offset lớn. Việc encode/decode RNS cần routines CRT/GA, tôi cung cấp thuật toán chuyển đổi nhanh (Garner's algorithm) và ước lượng độ phức tạp $O(k^2)$ naive hoặc $O(k \log^2 M)$ nếu dùng FFT-based modular multiplications.
+
+Hướng dẫn thực hiện: trong thiết kế hardware, mỗi modulus có thể được xử lý bằng mảng adder nhỏ độc lập; lưu trữ residues trong vùng lưu trữ phân đoạn và sửa lỗi độc lập.
+
+**9. Mô hình lỗi, ECC chi tiết & chiến lược chọn tham số (hướng dẫn thực hiện)**
+
+9.1 Mô tả nguồn lỗi
+
+Soft errors (bit flips): tỷ lệ lỗi $p$ per bit/time.
+
+Hard errors (permanent stuck bits): cần detect + retire.
+
+Arithmetic overflow/carry (do guard thiếu): dẫn đến corruption lớn.
+
+Quantization error (rời rạc hóa encoding): là sai số chấp nhận được trong topology tasks.
+
+9.2 Lựa chọn ECC
+
+Nếu mục tiêu: bảo vệ chống $\le t$ lỗi per-PFE giữa 2 checkpoints, chọn BCH/RS hoặc LDPC với thông số $(n, k, t)$.
+
+Thiết kế tham số:
+
+Dự trữ $g$ bits guard = ECC parity bits + slack bits để cô lập carry.
+
+Chọn $t$ dựa trên $p$ (tỷ lệ lỗi), chu kỳ giữa các checks $T_c$, và số bit per block $n$: đảm bảo $P(> t \text{ lỗi}) \ll \epsilon$ theo yêu cầu tin cậy. (Xác suất có thể ước lượng bằng phân phối binomial hoặc Poisson.)
+
+
+Thực hiện: sử dụng BCH cho block size $\le$ few Kbits, hoặc LDPC cho block lớn với decoder sum-product trong hardware.
+
+9.3 Dithering / oversampling bit-domain
+
+Khi rời rạc hóa góc/phases gây aliasing, thực hiện oversampling internal: lưu oversampled phase (ví dụ nhiều sub-phase) và trộn bit error bằng bit-shuffle $\rightarrow$ hiệu ứng tương tự noise trắng. Sau đó lọc (về phép phi tuyến học) làm mượt artifacts. Đây là phương pháp engineering để giảm artifacts rời rạc.
+
+**10. Kiến trúc MPU và cách xây dựng UWR — hướng dẫn kỹ thuật đầy đủ (constructive)**
+
+
