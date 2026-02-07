@@ -20,6 +20,8 @@ Linearized Integer Geometry Architecture. It is a mathematical-architectural fra
 
 + (Beta 4.0) https://github.com/nahhididwin/LIGA/blob/main/files(experiment)/idea3.11-beta.txt
 
++ (Released 5.0) https://github.com/nahhididwin/LIGA/blob/main/files(experiment)/id-5.0.txt
+
 # Author :
 
 Full name : Dang Dinh Phu Hung (Đặng Đình Phú Hưng)
