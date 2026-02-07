@@ -261,3 +261,75 @@ If $\phi \le w_{phy}$: mỗi $\phi$ nằm trong một hoặc hai words $\rightar
 
 Nếu $N$ lớn, bạn chunk $N$ into groups per word and operate in parallel across words.
 
+10.5 Mapping lên FPGA (prototype thực tế — hướng dẫn từng bước)
+
+Bước 1 — Chọn chunk width $w_{phy}$: typical $32/64$ bits (tùy FPGA memory interface).
+
+Bước 2 — Layout memory: store $\mathbb{L}$ as array of words in BRAM or URAM (Xilinx naming) in contiguous addresses so DMA can stream chunk sets into processing pipeline.
+
+Bước 3 — Implement bitwise engine: per-word LUT logic for AND/OR/NOT $\rightarrow$ trivially parallel.
+
+Bước 4 — Implement segmented add: for each word that covers $\phi + \text{guard region}$, implement ripple adder using FPGA fast carry chain (CARRY4) to minimize LUT use; ensure guard size chosen so that carry does not propagate across physical word boundary (or use explicit inter-word carry path if needed).
+
+Bước 5 — ECC/RNS: implement decode/encode in logic or soft-processor; for LDPC, prefer dedicated hardware decoder; for BCH small blocks, use lookup or Berlekamp–Massey + Chien search hardware.
+
+Bước 6 — DMA and scheduler: implement streaming so that UWR is loaded chunk by chunk; processing pipeline applies mask-add or bitwise ops; store back.
+
+Ước lượng tài nguyên (công thức):
+
+Bits memory $= N \cdot W$
+
+Words $= N \cdot \lceil W / w_{phy} \rceil$
+
+For per-word bitwise ops:
+
+$\text{LUTs} \approx k_1 \cdot \text{Words}$ ($k_1$ depends on operations)
+
+$\text{BRAMs} \approx \lceil \text{Bits} / \text{BRAM\_size} \rceil$
+
+Adders: to support add on $S$ words per cycle, need approx $S$ fast adder slices; latency per add $\approx L_{adder} \cdot \text{chunks covering } \varphi + g$.
+
+(Đây là dạng công thức để ước lượng — cụ thể số LUT/BRAM/DSP tùy FPGA chọn.)
+
+Tôi không đưa số tuyệt đối (số LUT/BRAM cụ thể) vì phụ thuộc FPGA model; thay vào đó cung cấp công thức tính để bạn chèn thông số thực tế của board mục tiêu.
+
+10.6 Lập trình ISA mẫu và microcode
+
+Đề xuất tập lệnh MPU (mô tả chức năng):
+
+LOAD_UWR(addr, W) — load UWR từ memory (stream).
+
+STORE_UWR(addr, W) — store back.
+
+ROTATE_MASK_ADD(v, o_phi, phi_bits) — perform mask add.
+
+BLOCK_SHIFT(offset) — block shift using barrel shifter matrix.
+
+BITWISE_AND/OR/NOT(block_mask) — apply bitwise to selected chunks.
+
+ECC_CHECK(block_id) — run ECC decode.
+
+RNS_ADD(mod_index, value) — add in residue domain.
+
+Microcode: ROTATE_MASK_ADD thực hiện:
+
+1. stream chunks covering $\phi + g$ vào adder pipeline,
+
+2. per chunk: add small adders, store carry in guard field,
+
+3. write back.
+
+**11. Độ phức tạp & băng thông — công thức chứng minh**
+
+11.1 Notations
+
+$m =$ total bits to process,
+
+$W =$ UWR width,
+
+$C = \lceil m/W \rceil =$ number of chunks,
+
+$B_{mem} =$ memory bandwidth (bits/s),
+
+$T_{comp} =$ computation cycles per chunk operation.
+
