@@ -7,8 +7,11 @@ Github : https://github.com/nahhididwin/LIGA/
 
 # Tóm tắt (Abstract)
 
+
+
 LIGA (Linearized Integer Geometry Architecture) là một khuôn lý thuyết + kiến trúc nhằm mã hoá mọi thực thể hình học rời rạc hữu hạn (tile, voxel, octree node, v.v.) vào một số nguyên lớn duy nhất
 $$\mathbb{L}$$ theo quy ước PFE (Polar Frame Encoding). Bằng cách thiết kế layout bit với các phân đoạn độc lập (Guard, State, Radius, Phase), ta có thể diễn đạt các phép biến đổi hình thái (Boolean/CSG, translation, rotation rời rạc, scaling via log-encoding) dưới dạng các thao tác số nguyên nguyên thủy (shift, bitwise, add modulo theo phân đoạn) và đưa ra điều kiện cần-đủ để những phép toán đó tương đương chính xác với phép toán hình học mong muốn.
+
 
 Trong văn bản này tôi:
 
@@ -21,4 +24,128 @@ Trong văn bản này tôi:
 4. Trình bày phương pháp xây dựng UWR (Ultra-Wide Register) và MPU (Morphological Processing Unit) một cách xây dựng: cách tổ chức thanh ghi rất rộng bằng các phần tử phần cứng hiện có (block RAM, LUT, DSP, multi-word buses), mảng cộng song song phân đoạn, barrel shifter matrix, và mapping thực tế lên FPGA như một prototype khả thi (các bước, thuật toán, ước lượng tài nguyên biểu thức).
 
 5. Đưa ra lộ trình thí nghiệm chi tiết kèm tập dữ liệu, kiểm định điều kiện lý thuyết, inject-fault tests, và phép so sánh đối chứng (GPU, vectorized CPU).
+
+6. Trình bày các kịch bản ứng dụng, hạn chế, trade-offs, và các bằng chứng luận lý cho mọi khẳng định.
+
+Kết luận: LIGA có tiềm năng trở thành một lối tiếp cận mạnh cho các bài toán hình thái rời rạc n-chiều, khi và chỉ khi (i) đối tượng bài toán thỏa 3 điều kiện đã nêu (rời rạc, biến đổi đồng loạt, chú trọng topology), và (ii) kiến trúc UWR/MPU được triển khai sao cho thỏa các điều kiện guard/ECC/RNS. Tôi cung cấp đủ công thức, chứng minh và lộ trình để kiểm chứng thực nghiệm những tuyên bố này.
+
+
+
+# Nội dung chi tiết
+
+**1. Định nghĩa cơ bản, ký hiệu**
+
+$n$ — số chiều (có thể $n \geq 1$).
+
+Một lưới rời rạc $G$ có $d$ bit theo mỗi chiều (kích thước $2^d$ per-dimension). Tổng ô $= 2^{d \cdot n}$.
+
+Mỗi frame: một đơn vị packing dùng để mô tả một tile/hypervoxel/ô trong cây (octree node) — chứa các trường: Phase $\phi$ (vòng pha rời rạc), Radius $\rho$, State $S$ (trạng thái vật liệu), và Guard $Gd$.
+
+Ký hiệu $W =$ tổng số bit của một PFE; $N =$ số PFE đóng gói trong $\mathbb{L}$. Do đó $\mathbb{L} \in \{0, \dots, 2^{NW} - 1\}$ và
+
+$$\mathbb{L} = \sum_{k=0}^{N-1} \text{PFE}_k \cdot 2^{kW}.$$
+
+Mỗi PFE có phân đoạn bit (từ LSB $\to$ MSB): $\phi$ (width $\varphi$), $\rho$ (width $r$), $S$ (width $s$), $Gd$ (width $g$), với $g + s + r + \varphi = W$.
+
+Offset of $\phi$ in PFE: $o_\phi$ (LSB position).
+
+Trong phần sau, khi viết "thêm $v$ vào phân đoạn $\phi$", tôi hiểu đó là thêm theo modulo $2^\varphi$ và thực hiện bằng một phép cộng toàn chuỗi trên $\mathbb{L}$ với một mặt nạ $M(v)$ đã được định nghĩa.
+
+**2. Ánh xạ $\mathcal{F}$ và tính injective**
+
+Định nghĩa 2.1 (Packing $\mathcal{F}$). Với một bộ frame $F = \{\text{PFE}_0, \dots, \text{PFE}_{N-1}\}$, định nghĩa $\mathcal{F}(F) = \sum_{k=0}^{N-1} \text{PFE}_k \cdot 2^{kW}$.
+
+Định lý 2.1 (Injectivity). Cho hai cấu trúc occupancy $A, B$ trên cùng grid/pacing và cùng quy ước packing. Nếu tồn tại ít nhất một ô $i$ sao cho $o_A(i) \neq o_B(i)$ thì $\mathcal{F}(A) \neq \mathcal{F}(B)$.
+
+Chứng minh. Vì quy ước packing cố định ánh một ô cụ thể tới một bit cụ thể trong một PFE cố định, khác biệt occupancy tại ô $i$ làm thay đổi bit tương ứng trong PFE tương ứng. Do phép đóng gói là phép ánh xạ tuyến tính trên bit-positions (với cơ số 2) nên hai biểu diễn phải khác nhau. $\square$
+
+Đây là bằng chứng đơn giản nhưng quan trọng: injectivity phụ thuộc vào quy ước packing không đổi. Nếu packing thay đổi giữa hai biểu diễn thì injectivity không còn đảm bảo — điều này phải được cảnh báo trong thực nghiệm.
+
+**3. CSG và tính chính xác**
+
+Định lý 3.1 (CSG chính xác bằng bitwise logic). Với quy ước packing 1-bit per cell (mỗi ô tương ứng một bit occupancy), các phép toán tập rời rạc chuẩn (union/intersection/difference) tương đương đúng đắn với các phép toán bitwise trên $\mathbb{L}$:
+
+$$\mathbb{L}_{A \cap B} = \mathbb{L}_A \ \& \ \mathbb{L}_B, \quad \mathbb{L}_{A \cup B} = \mathbb{L}_A \ | \ \mathbb{L}_B, \quad \mathbb{L}_{A \setminus B} = \mathbb{L}_A \ \& \ \neg \mathbb{L}_B.$$
+
+Chứng minh. Mỗi bit là chỉ thị occupancy, và các phép toán tập Boolean tương ứng bit-wise. Do đó trên không gian toàn bộ bit-positions, phép toán tập tương đương phép toán logic bit. $\square$
+
+Hệ quả thực nghiệm: cho bất kỳ cài đặt phần mềm/hardware nào thực hiện bitwise ops trên cùng ordering, các phép CSG là chính xác tuyệt đối (không tồn tại lỗi làm sai vị trí nào) — miễn là các bit không bị lỗi (bit-flip) trong quá trình.
+
+**4. Guard-safety: điều kiện tránh carry cross-segment — chứng minh toán học**
+
+Mục tiêu: khi ta thực hiện phép cộng mặt nạ $M(v)$ (cộng $v$ vào trường $\phi$ của mọi PFE cùng lúc bằng một phép cộng trên toàn $\mathbb{L}$), chúng ta cần đảm bảo không có carry làm thay đổi các phân đoạn khác của cùng PFE hoặc lan sang PFE bên cạnh.
+
+**4.1 Mô tả carry chain**
+
+Khi cộng hai số nguyên, carry có thể propagate từ bit thấp lên bit cao qua nhiều bit liên tiếp.
+
+Nếu trong PFE ta chia thành phân đoạn liên tiếp, để cô lập phép cộng trong một phân đoạn cần đảm bảo rằng carry không vượt ra khỏi vùng dự phòng (guard).
+
+**4.2 Điều kiện đơn giản (sufficiency)**
+
+Định nghĩa (Guard-safe layout). Gọi $C_{\max}$ là giá trị lớn nhất có thể phát sinh ở tổng của trường $\phi$ cộng các phép cộng chồng (ví dụ nếu áp dụng tối đa $t$ lần cộng $v$ liên tiếp trước khi kiểm tra/reset), thì nếu:
+
+$$2^\varphi (\text{modulus}) \times t \leq 2^\varphi \cdot t \leq 2^\varphi \cdot (2^g - 1)$$
+
+hay tương đương,
+
+$$g > \lfloor \log_2 (C_{\max} / 2^\varphi) \rfloor$$
+
+thì guard có đủ bit để chứa mọi carry không cho phép lan sang phân đoạn tiếp theo. Cách phát biểu đầy đủ hơn:
+
+Điều kiện (sufficient): nếu mọi phép toán cộng trên phân đoạn $\phi$ có tổng tại mỗi PFE nằm trong khoảng $[0, 2^\varphi - 1 + R]$ với $R$ là tổng carry tạm thời tối đa, và nếu $R < 2^g$ thì carry không thể đặt 1 vào bất kỳ bit nào bên ngoài trường guard (vì guard có ít nhất $g$ bit đặt để nhận carry). Do đó vùng State/Radius/next-PFE không bị ảnh hưởng.
+
+**Chứng minh (phác thảo "carry bounding")**
+
+Khi cộng $M(v)$ trên toàn $\mathbb{L}$, mỗi PFE nhận một cộng $v$ vào trường $\phi$. Giá trị trước addition tại PFE $k$ là $x_k \in [0, 2^\varphi - 1]$. Sau addition và modulo $2^\varphi$ nội bộ, carry ra khỏi trường $\phi$ có giá trị $c_k = \lfloor (x_k + v) / 2^\varphi \rfloor \in \{0, 1, \dots \}$. Khi tổng số phép cộng chồng tối đa (hoặc khi các phép cộng được thực hiện liên tiếp trước khi làm sạch) là $t$, tổng carry tích lũy tối đa vào vùng guard là $\leq c_{\max} t$ với $c_{\max} \leq \lceil v / 2^\varphi \rceil$. Nên nếu guard có thể biểu diễn mọi giá trị carry tích lũy (tức $2^g - 1 \geq$ tổng carry), carry sẽ bị chứa trong guard và không làm bốc bit ở phân đoạn kế tiếp. Vì vậy guard-safety đảm bảo isolation. $\square$
+
+Lưu ý thực tế: công thức chính xác của $C_{\max}$ phụ thuộc chiến lược thực hiện (single global addition với modulo $2^{NW}$ hay successive small adds) — trong thực nghiệm bạn phải tính $t$ và $v$ cụ thể.
+
+**4.3 Điều kiện cần thiết**
+
+Nếu guard quá nhỏ để chứa carry tích lũy, tồn tại bộ khởi tạo PFE sao cho carry sẽ lan sang phân đoạn bên cạnh và thay đổi state/ radius; do đó guard-safety là cần nếu bạn muốn không có thay đổi cross-segment trong mọi trường hợp. Tuy nhiên, nếu bạn có kiểm soát ngặt việc thực hiện phép cộng (ví dụ chỉ thực hiện khi biết $x_k + v < 2^g$ cho mọi $k$) thì guard có thể nhỏ hơn; đó là trade-off.
+
+**5. Rotation bằng mask-add: định lý và chứng minh chặt chẽ**
+
+Định nghĩa (Phase mask). Với một giá trị pha rời rạc $v \in [0, 2^{\varphi} - 1]$, định nghĩa
+
+$$M(v) = \sum_{k=0}^{N-1} v \cdot 2^{kW+o_{\phi}}.$$
+
+(Đây là số nguyên có cùng trường $\phi$ của mỗi PFE đặt bằng $v$.)
+
+Định lý 5.1 (Rotation bằng addition toàn cục). Nếu layout là guard-safe theo định nghĩa ở trên và phép toán được thực hiện bằng một phép cộng toàn cục
+
+$$\mathbb{L}' = (\mathbb{L} + M(v)) \bmod 2^{NW},$$
+
+thì với mỗi PFE $k$, trường $\phi$ của $\text{PFE}_k$ được cập nhật đúng bằng
+
+$$\phi'_k = (\phi_k + v) \bmod 2^{\varphi},$$
+
+và các phân đoạn khác (state, rho, guard) không thay đổi (ngoại trừ phần guard chứa carry). Nghĩa là phép toán tương đương với "xoay rời rạc" mọi frame cùng lúc.
+
+Chứng minh.
+
+Viết $\mathbb{L} = \sum_k p_k 2^{kW}$ với $p_k \in [0, 2^W - 1]$ là mỗi PFE dưới dạng integer. Mặt nạ $M(v)$ viết được dưới dạng $\sum_k v 2^{kW+o_{\phi}}$.
+
+Ở mỗi PFE, addition $p_k + v \cdot 2^{o_{\phi}}$ chỉ tác động lên các bit trong dải $[o_{\phi}, o_{\phi} + \varphi - 1]$ và có thể tạo carry sang các bit trên (vùng guard nằm bên trên). Nếu guard-safety đảm bảo carry sẽ dừng trong guard và không tạo carry sang phân đoạn state/rho của cùng PFE, thì phần state/rho giữ nguyên.
+
+Do phép cộng cộng đồng (global integer add) tương đương nối các phép cộng độc lập tại từng PFE kèm propagate carry giữa PFE $k$ và $k+1$ chỉ khi overflow qua $W$-bits xuất hiện. Nếu ta thực hiện modulo $2^{NW}$ và bố cục PFE liên tiếp, overflow từ PFE $k$ sang PFE $k+1$ sẽ chỉ xảy ra nếu total carry vào bit $kW + W$ là $\ge 1$. Nhưng với guard đủ dài để chặn mọi carry đã giới hạn, overflow không xảy ra.
+
+Kết luận: mỗi $\phi_k$ được cộng modulo $2^{\varphi}$ độc lập. $\Box$
+
+**6. Scaling bằng mã hoá log (chứng minh toán học)**
+
+Định lý 6.1 (Scaling $\approx$ addition trên mã hóa log). Giả sử bạn mã hoá bán kính bằng một số nguyên rời rạc $\tilde{\rho} = \text{enc}(\ln \rho)$ sao cho $\text{dec}(\tilde{\rho})$ là một hàm xấp xỉ $\exp$ của $\tilde{\rho}$. Khi đó nhân bán kính bởi konst $s > 0$ tương đương cộng hằng số vào $\tilde{\rho}$:
+
+$$\text{enc}(\ln(s\rho)) = \text{enc}(\ln s + \ln \rho) \approx \text{enc}(\ln s) + \tilde{\rho},$$
+
+với sai số $\le$ nửa bước mã hóa (quantization error).
+
+Chứng minh (lôg-linearity). Trivial từ log: $\ln(s\rho) = \ln s + \ln \rho$. Nếu $\text{enc}$ là một ánh xạ tuyến tính (hoặc tuyến tính từng đoạn) từ $\ln(\cdot)$ về số nguyên, thì phép nhân biến thành phép cộng với sai số do rời rạc hoá. Độ lớn sai số có thể phân tích: nếu $\text{enc}$ là $\tilde{\rho} = \lfloor \alpha \ln \rho + \beta \rceil$ thì sai số $\le 1/2$ (đơn vị mã hóa). $\square$
+
+Lưu ý: điều này chỉ hữu dụng khi ứng dụng chấp nhận sai số multiplicative nhỏ do rời rạc hoá — phù hợp với các bài toán topology/occupancy, không phù hợp khi cần metric chính xác.
+
+**7. Reversibility có điều kiện qua ECC (chứng minh)**
+
+
 
