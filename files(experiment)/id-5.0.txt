@@ -227,3 +227,37 @@ RNS/ECC Unit: module for residue conversions and $\text{ECC encode/decode}$.
 
 DMA/Compression unit: streaming nén/giải nén $\text{octree / sparse streams}$.
 
+10.2 Chi tiết xây dựng UWR bằng chunking
+
+Ý tưởng: lưu $W$-bit register bằng $C$ words $w_{phy}$ (ví dụ 64-bit forms). Mọi phép bitwise là thao tác độc lập trên từng word $\rightarrow$ latency $O(1)$ từ view clock cycles (mỗi word thao tác 1 cycle; có thể pipeline). Đối với addition toàn UWR, ta cần multiword adder.
+
+Thiết kế multiword adder không-carry-chain-mắc-nợ:
+
+Truyền thống: multiword ripple-carry adder có carry chain qua words (chậm). Khắc phục: dùng carry-save adders (CSA) tree hoặc carry-lookahead/Kogge-Stone cho multiword, hoặc thực hiện addition theo phân đoạn (segment-wise) do chúng ta chỉ cần add vào các phân đoạn $\phi$ nhỏ hơn $W$.
+
+Segmented addition approach (đề xuất):
+
+Chia $W$ thành per-PFE vùng (mỗi PFE $W$ bits). Mỗi PFE chứa $\phi$ ở offset cố định.
+
+Khi cần add $M(v)$: tổ chức adder chỉ xử lý word chunks có chứa bits $\phi + \text{guard region}$; các chunk khác chỉ pass-through.
+
+Sử dụng local ripple adder trong mỗi chunk, nhưng guard đủ rộng để carry không lan sang chunk kế $\rightarrow$ total latency = $\text{number of words covering } (\phi + \text{guard}) \times \text{adder latency}$.
+
+Ưu điểm: latency thấp hơn so với addition toàn $W$ nếu $\phi$ small relative to $W$; hardware reuse.
+
+Tỉ lệ pipelining / throughput: thực hiện addition pipelined trên nhiều stage (chunk-level), cho throughput 1 add per cycle sau pipeline fill (với resource tradeoff).
+
+10.3 Barrel Shifter Matrix — xây dựng
+
+Dịch một UWR theo offset $o$: thực hiện bằng dịch trên mỗi word cộng cross-word routing. Barrel shifter matrix có thể được cấu thành bởi mạng muxes/rotators giữa words. Latency $\sim O(\log C)$ theo việc dùng tree mux. Trong FPGA, dùng routing LUT để xây barrel shifter. Nếu nhiều dịch đồng thời (vector of shifts), thiết kế thành mảng shifters.
+
+10.4 Phase Adder Array — mảng cộng song song
+
+Thiết kế một array gồm $N$ small adders (mỗi add modulo $2^\phi$) hoạt động song song — nhưng triết lý LIGA là thực hiện một add duy nhất lớn thay vì $N$ adds; trong hardware, ta triển khai effect same bằng việc kết hợp mảng adders nhỏ hoặc multiword addition optimized để chỉ xử lý segment $\phi$.
+
+Implementation choices:
+
+If $\phi \le w_{phy}$: mỗi $\phi$ nằm trong một hoặc hai words $\rightarrow$ dùng $N$ parallel small adders operating on packed residues (SIMD within word) — cần nhiều logic.
+
+Nếu $N$ lớn, bạn chunk $N$ into groups per word and operate in parallel across words.
+
