@@ -215,3 +215,15 @@ Lưu ý: "UWR" (Ultra-Wide Register) không phải một phép màu; kỹ thuậ
 
 Các module cơ bản:
 
+Storage (UWR store): $\text{UWR} = \text{concat}(W \text{ bits})$; thực hiện bằng $C = \lceil W / w_{phy} \rceil$ words vật lý (ví dụ $w_{phy} = 64$ bit). Mỗi word lưu chunk $k$ của UWR.
+
+Bitwise Engine: thực hiện $\text{AND/OR/NOT}$ trên từng word, hoạt động song song trên $C$ words.
+
+Phase Adder Array (segmented): thực hiện add modulo trên mỗi phân đoạn $\phi$ của mỗi PFE. Thiết kế theo mô-đun: $\text{per-chunk adder} + \text{carry-isolation}$.
+
+Barrel Shifter Matrix: hỗ trợ dịch lớn (khi dịch offset nhiều bit) — được thực hiện bằng tổ hợp $\text{barrel shifters per-chunk}$ và $\text{cross-word routing}$.
+
+RNS/ECC Unit: module for residue conversions and $\text{ECC encode/decode}$.
+
+DMA/Compression unit: streaming nén/giải nén $\text{octree / sparse streams}$.
+
