@@ -333,3 +333,65 @@ $B_{mem} =$ memory bandwidth (bits/s),
 
 $T_{comp} =$ computation cycles per chunk operation.
 
+11.2 Latency / throughput model
+
+If $m \le W$: one chunk $\rightarrow$ compute time $\approx t_{uwr}$ (hằng số thiết kế) — tức $O(1)$.
+
+If $m > W$: need $C$ chunks $\rightarrow$ time $\approx C \cdot (t_{io} + t_{comp})$.
+
+Bounded speedup over pairwise per-frame operations: nếu baseline executes per-frame ops requiring access to each frame separately, LIGA approach reduces memory passes (khi packing nhiều frame trong một UWR) — speedup factor $\approx$ ratio of baseline memory accesses to LIGA memory accesses. Công thức cụ thể phụ thuộc packing density.
+
+Băng thông yêu cầu: to sustain throughput of $R$ operations/s on objects of size $m$, need memory bandwidth $\ge R \cdot m$.
+
+**12. Giao diện rendering: Bit $\rightarrow$ Pixel + Neural Bit Decoder (thiết kế & chứng minh mô tả)**
+
+Bit $\rightarrow$ Pixel deterministic pipeline: quét bit-tiles theo Hilbert/Morton order, tạo tile framebuffer. Đây là chuyển đổi thuần logic/lookup; tính đúng đắn dễ kiểm tra bằng mapping bit positions $\rightarrow$ pixel positions.
+
+Neural Bit Decoder (NBD): mô hình học (CNN) lấy patch bit (ví dụ $32 \times 32$ binary patch) và tạo output RGB tile. Tôi trình bày kiến trúc mẫu ($3\times$ conv + upsample + residuals) và metric (SSIM, LPIPS). NBD không là phần bắt buộc của LIGA; nó là module tùy chọn để chuyển từ topology bit $\rightarrow$ texture mượt mà.
+
+**13. Hạn chế, trade-offs (phân tích chặt chẽ)**
+
+Curse of dimensionality: số ô tăng theo $2^{d \cdot n}$ — LIGA không phá bỏ độ tăng này, chỉ giúp xử lý song song và biểu diễn; cần sparsity / hierarchical structures (octree) để khả thi.
+
+Chi phí I/O: nếu $m$ quá lớn, I/O (DRAM) mới là cổ chai; cần streaming, compression.
+
+Precision vs topology: nếu ứng dụng cần metric chính xác (phép nội suy, shading perspective-correct), LIGA không phù hợp trực tiếp.
+
+Hardware cost: UWR/MPU yêu cầu routing và resources nhiều; trade-off giữa throughput và cost.
+
+**14. Lộ trình thí nghiệm & benchmark: đầy đủ, có thể thực hiện ngay**
+
+Tôi liệt kê các bước thực hiện (chi tiết để lặp lại) nhằm kiểm chứng mọi mệnh đề:
+
+Giai đoạn 0 — Chuẩn bị datasets & baseline
+
+Datasets: voxelized Stanford Bunny (các độ phân giải: $128^3, 256^3, 512^3$), CAD boolean models (CSG heavy), synthetic high-dim sparse/hypervoxel nD data (n=4,5 thử nghiệm kích thước nhỏ), octree test scenes.
+
+Baselines: GPU sparse voxel engine (CUDA), CPU vectorized numpy implementation, pure per-frame python loop. Mục tiêu: đo latency/op, memory, energy simul.
+
+Giai đoạn A — Reference software (6–8 tuần)
+
+Implement LIGA::pack/unpack, build_phase_mask, apply_rotation_mask như script mẫu; kiểm tra correctness với random tests (unpack sau khi operations).
+
+Implement guard-safety analyzer: simulate sequences of operations và check carry events (count if any bit outside guard flips).
+
+Implement ECC simulate: inject faults (random bit flips), run ECC decode and check recovery rate. Tính empirical P(recover).
+
+Metrics: per-op latency, throughput, memory footprint, Hamming distance vs ground truth.
+
+Giai đoạn B — RNS/ECC validation (6–8 tuần)
+
+Implement RNS arithmetic modules; measure speed vs big integer addition; evaluate cost of CRT decode.
+
+Fault injection: inject random bit flips at rates simulating radiation/soft errors; measure ECC decode success vs $t$, compute probabilities and choose $g$ accordingly.
+
+Giai đoạn C — FPGA prototype (12–20 tuần)
+
+Target: mid-range FPGA (một board development). Implement UWR as chunked BRAM + logic pipeline.
+
+Implement Barrel shifter, segmented adder pipeline, ECC decoder (BCH).
+
+Measure throughput, latency, energy (if board instrumented), and compare end-to-end with GPU baseline for CSG/rotation workloads.
+
+Verify guard-safety empirically by applying many mask-adds and checking for cross-segment corruption.
+
