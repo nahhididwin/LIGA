@@ -395,3 +395,78 @@ Measure throughput, latency, energy (if board instrumented), and compare end-to-
 
 Verify guard-safety empirically by applying many mask-adds and checking for cross-segment corruption.
 
+Giai đoạn D — End-to-end pipeline & NBD (8–12 tuần)
+
+Integrate NBD for Bit $\to$ Pixel path; measure SSIM/LPIPS vs rasterization; measure latency.
+
+For nD tests, measure wall time to apply global rotation offset on all frames vs baseline.
+
+**15. Ví dụ numeric minh hoạ carry/guard (mở rộng)**
+
+Cho ví dụ cụ thể để chứng minh guard-safety:
+
+$W=64, \text{phi\_bits } \varphi = 10, rho=12, state=6 \Rightarrow \text{guard } g=36$.
+
+$v=200, \text{max stacked additions } t=10 \Rightarrow \text{worst carry into guard } \leq \lceil (2^{10} - 1 + 200 \cdot 10) / 2^{10} \rceil =$ compute exactly:
+
+$\max \phi \text{ initial} = 2^{10} - 1 = 1023$
+
+after adding $200 \cdot 10 = 2000 \to 3023 \to \text{carry count} = \lfloor 3023 / 1024 \rfloor = 2$. Carry into guard $\leq 2$.
+
+Guard $g=36$ can store values up to $2^{36} - 1 \gg 2 \to \text{safe}$.
+
+Áp dụng công thức của phần 4, ta thấy guard đủ lớn để cô lập carry.
+
+**16. Những mệnh đề không hoàn toàn có chứng minh (và cách chứng minh chúng)**
+
+Một vài tuyên bố thực nghiệm kiểu “LIGA có thể nhanh hơn GPU cho workloads voxel-heavy” là khẳng định cần kiểm chứng. Tôi không chứng minh được một kết luận global vì:
+
+Nó phụ thuộc vào nhiều tham số (sparsity, $W, N$, I/O bandwidth, FPGA/ASIC vs latest GPU).
+
+Tuy nhiên tôi cung cấp bộ thí nghiệm và metrics để kiểm chứng. Cụ thể, để chứng minh (hoặc phủ định) câu này, thực hiện: (i) lấy workloads representative, (ii) triển khai prototype FPGA MPU theo hướng dẫn, (iii) đo latency/throughput/energy, (iv) so sánh với GPU chuyên dụng dùng best practice. Kết quả thực nghiệm sẽ đưa ra kết luận.
+
+**17. Toàn bộ pseudocode, test suites, và cách tái tạo experiment (chi tiết)**
+
+Tôi cung cấp pseudocode chính mở rộng (bản rút gọn vì bạn đã có mã Python mẫu). Hướng dẫn reproducibility:
+
+Cài đặt môi trường Python (3.9+), numpy, pytest.
+
+Clone repository (github link bạn cung cấp).
+
+Thêm tests:
+
+test_pack_unpack: random frames → pack → unpack → compare.
+
+test_mask_add: apply mask add iterations → unpack → compare with per-frame vectorized update.
+
+test_guard_violation: generate adversarial frames to attempt to produce cross-segment carry; check detection.
+
+fault_injection_test: flip random bits in $\mathbb{L}$ $\to$ run ECC decode $\to$ check recovery.
+
+Tôi đã mở rộng mã mẫu trong phần appendix của bạn; bạn có thể dùng test harness đó làm base.
+
+**18. Kết luận **
+
+Toán học: các định lý cốt lõi (injectivity, CSG correctness, rotation by mask-add under guard-safe) có chứng minh toán học đơn giản và chặt chẽ; scaling bằng mã hoá log là đúng tính chất toán học (log turn multiplication into addition modulo quantization error). Những bằng chứng này đã được trình bày rõ ràng ở trên.
+
+Kỹ thuật/kiến trúc: LIGA đưa ra một cách thiết kế kiến trúc (UWR/MPU) có thể xây dựng bằng các kỹ thuật hardware hiện nay (chunking, BRAM/URAM, carry-isolation, ECC). Tôi đã cung cấp phương pháp triển khai cụ thể (module breakdown, mapping steps, ước lượng công thức) và lộ trình prototype FPGA để kiểm chứng. Điều này là constructive: tức một kỹ sư có thể làm theo để thực hiện prototype.
+
+Phạm vi đột phá: LIGA là tiềm năng đột phá cho bài toán rời rạc n-chiều trong trường hợp các yếu tố đầu vào phù hợp (discrete grid, mass uniform operations, topology-centred). Việc khẳng định LIGA là đột phá tổng quát trong mọi ngữ cảnh là quá rộng và đòi hỏi thí nghiệm rộng rãi; tôi đã cung cấp lộ trình để kiểm chứng điều đó.
+
+
+**19. Tài liệu tham khảo & bước tiếp theo (ngắn gọn)**
+
+Bước tiếp theo thực nghiệm: triển khai phần mềm tham chiếu (bắt đầu từ mã Python mẫu), sau đó FPGA prototype; chạy benchmark so sánh với vectorized CPU và GPU cho bộ test đã nêu.
+
+**Phần đính kèm ngắn (Appendix: các mệnh đề đã chứng minh tóm tắt)**
+
+Định lý 2.1 (Injectivity) — chứng minh dựa trên ánh xạ bit-positions.
+
+Định lý 3.1 (CSG correctness) — chứng minh bằng mapping bit ↔ occupancy.
+
+Định lý 5.1 (Rotation bằng mask-add) — chứng minh bằng phân tích carry và isolation guard.
+
+Định lý 6.1 (Scaling via log) — chứng minh từ tính chất log.
+
+Định lý 7.1 (Reversibility with ECC) — luận lý: ECC sửa lỗi ≤ t ⇒ phép nghịch đảo có thể thực hiện.
+
