@@ -207,3 +207,11 @@ Khi rời rạc hóa góc/phases gây aliasing, thực hiện oversampling inter
 **10. Kiến trúc MPU và cách xây dựng UWR — hướng dẫn kỹ thuật đầy đủ (constructive)**
 
 
+Mục tiêu ở đây: đưa ra phương pháp cụ thể, đủ chi tiết để một đội kỹ sư FPGA/ASIC có thể triển khai prototype UWR/MPU. Tôi trình bày thiết kế theo cấp độ mô-đun, kèm thuật toán, mapping sang phần tử FPGA/ASIC và ước lượng công thức tài nguyên.
+
+Lưu ý: "UWR" (Ultra-Wide Register) không phải một phép màu; kỹ thuật xây dựng thực hiện bằng cách kết hợp nhiều thành phần lưu trữ nhỏ hơn (words) cùng với logic thao tác song song. Tôi trình bày cách xây dựng tập-hợp các registers rất rộng bằng chunking + wide arithmetic units + barrel shifter matrix.
+
+10.1 Thiết kế tổng quan (block diagram)
+
+Các module cơ bản:
+
