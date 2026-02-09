@@ -29,7 +29,7 @@ Full name : Dang Dinh Phu Hung (Đặng Đình Phú Hưng)
 
 Nation : Vietnam
 
-Date of birth: 20/06/2011 (DD/MM/YYYY)
+Date of birth: 
 
 Github : https://github.com/nahhididwin
 
