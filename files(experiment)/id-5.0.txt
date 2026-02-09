@@ -29,8 +29,7 @@ Trong văn bản này tôi:
 
 Kết luận: LIGA có tiềm năng trở thành một lối tiếp cận mạnh cho các bài toán hình thái rời rạc n-chiều, khi và chỉ khi (i) đối tượng bài toán thỏa 3 điều kiện đã nêu (rời rạc, biến đổi đồng loạt, chú trọng topology), và (ii) kiến trúc UWR/MPU được triển khai sao cho thỏa các điều kiện guard/ECC/RNS. Tôi cung cấp đủ công thức, chứng minh và lộ trình để kiểm chứng thực nghiệm những tuyên bố này.
 
-Lưu ý : Lý thuyết này cho đến tận lúc được đăng lên vẫn chỉ đang được một học sinh sinh năm 2011 nghiên cứu/phát triển. Nó vẫn có thể có hạn chế, hy vọng sẽ được góp ý hoặc được cộng đồng giúp đỡ trong việc hoàn thiện.
-
+This work is an early-stage theoretical exploration developed independently by a student researcher. Due to practical constraints, the current version focuses on conceptual formulation and preliminary validation. The author welcomes feedback, critique, and collaboration from the community.
 
 
 # Nội dung chi tiết
