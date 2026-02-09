@@ -11,6 +11,8 @@ This work is an early-stage theoretical exploration developed independently by a
 
 **Recommended reading:**
 
+
+
 + (Alpha 1.1) https://github.com/nahhididwin/LIGA/blob/main/files(experiment)/idea-1.1.txt
 
 + (Beta 1.11) https://github.com/nahhididwin/LIGA/blob/main/files(experiment)/idea-1.11.txt
@@ -21,7 +23,8 @@ This work is an early-stage theoretical exploration developed independently by a
 
 + (Beta 4.0) https://github.com/nahhididwin/LIGA/blob/main/files(experiment)/idea3.11-beta.txt
 
-+ (Released 5.0) https://github.com/nahhididwin/LIGA/blob/main/files(experiment)/id-5.0.txt
++ (Beta 5.0) https://github.com/nahhididwin/LIGA/blob/main/files(experiment)/id-5.0.txt
+
 
 # Author :
 
